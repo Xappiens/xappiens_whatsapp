@@ -83,95 +83,85 @@ class WhatsAppSession(Document):
 
 	@frappe.whitelist()
 	def connect_session(self):
-		"""Connect to WhatsApp session via API."""
+		"""Conectar sesión de WhatsApp."""
 		try:
 			from xappiens_whatsapp.api.session import start_session
-			result = start_session(self.session_id)
-
-			if result.get("success"):
-				self.is_connected = True
-				self.status = "Connected"
-				self.connected_at = now()
-				self.last_activity = now()
-				self.save()
-
-				return {"success": True, "message": "Session connected successfully"}
-			else:
-				return {"success": False, "message": result.get("message", "Failed to connect")}
-
+			result = start_session(self.name)
+			return result
 		except Exception as e:
-			frappe.log_error(f"Error connecting session {self.session_id}: {str(e)}")
+			frappe.log_error(f"Error al conectar sesión {self.session_id}: {str(e)}")
 			return {"success": False, "message": str(e)}
 
 	@frappe.whitelist()
-	def disconnect_session(self):
-		"""Disconnect from WhatsApp session."""
+	def disconnect_session_btn(self):
+		"""Desconectar sesión de WhatsApp."""
 		try:
 			from xappiens_whatsapp.api.session import disconnect_session
-			result = disconnect_session(self.session_id)
-
-			if result.get("success"):
-				self.is_connected = False
-				self.status = "Disconnected"
-				self.last_activity = now()
-				self.save()
-
-				return {"success": True, "message": "Session disconnected successfully"}
-			else:
-				return {"success": False, "message": result.get("message", "Failed to disconnect")}
-
-		except Exception as e:
-			frappe.log_error(f"Error disconnecting session {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
-
-	@frappe.whitelist()
-	def get_qr_code(self):
-		"""Get QR code for session."""
-		try:
-			from xappiens_whatsapp.api.session import get_session_qr
-			result = get_session_qr(self.session_id)
-
-			if result.get("success"):
-				self.qr_code = result.get("qr")
-				self.qr_generated_at = now()
-				self.status = "QR Pending"
-				self.save()
-
-				return {"success": True, "qr_code": self.qr_code}
-			else:
-				return {"success": False, "message": result.get("message", "Failed to get QR")}
-
-		except Exception as e:
-			frappe.log_error(f"Error getting QR for session {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
-
-	@frappe.whitelist()
-	def sync_contacts(self):
-		"""Sync contacts from WhatsApp API."""
-		try:
-			from xappiens_whatsapp.api.contacts import sync_session_contacts
-			result = sync_session_contacts(self.session_id)
-
-			self.update_statistics()
-
+			result = disconnect_session(self.name)
 			return result
-
 		except Exception as e:
-			frappe.log_error(f"Error syncing contacts for session {self.session_id}: {str(e)}")
+			frappe.log_error(f"Error al desconectar sesión {self.session_id}: {str(e)}")
 			return {"success": False, "message": str(e)}
 
 	@frappe.whitelist()
-	def sync_conversations(self):
-		"""Sync conversations from WhatsApp API."""
+	def get_qr_code_btn(self):
+		"""Obtener código QR para escanear."""
 		try:
-			from xappiens_whatsapp.api.conversations import sync_session_conversations
-			result = sync_session_conversations(self.session_id)
-
-			self.update_statistics()
-
+			from xappiens_whatsapp.api.session import get_qr_code
+			result = get_qr_code(self.name, as_image=True)
 			return result
-
 		except Exception as e:
-			frappe.log_error(f"Error syncing conversations for session {self.session_id}: {str(e)}")
+			frappe.log_error(f"Error al obtener QR {self.session_id}: {str(e)}")
+			return {"success": False, "message": str(e)}
+
+	@frappe.whitelist()
+	def check_status(self):
+		"""Verificar estado de la sesión."""
+		try:
+			from xappiens_whatsapp.api.session import get_session_status
+			result = get_session_status(self.name)
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error al verificar estado {self.session_id}: {str(e)}")
+			return {"success": False, "message": str(e)}
+
+	@frappe.whitelist()
+	def sync_all_data(self):
+		"""Sincronizar todos los datos (contactos, conversaciones, mensajes)."""
+		try:
+			from xappiens_whatsapp.api.sync import sync_session_data
+			result = sync_session_data(
+				self.name,
+				sync_contacts_flag=True,
+				sync_conversations_flag=True,
+				sync_messages_flag=False  # Mensajes se sincronizan por conversación
+			)
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error al sincronizar datos {self.session_id}: {str(e)}")
+			return {"success": False, "message": str(e)}
+
+	@frappe.whitelist()
+	def sync_contacts_btn(self):
+		"""Sincronizar solo contactos."""
+		try:
+			from xappiens_whatsapp.api.contacts import sync_contacts
+			result = sync_contacts(self.name)
+			self.reload()  # Recargar para mostrar estadísticas actualizadas
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error al sincronizar contactos {self.session_id}: {str(e)}")
+			return {"success": False, "message": str(e)}
+
+	@frappe.whitelist()
+	def sync_conversations_btn(self):
+		"""Sincronizar solo conversaciones."""
+		try:
+			from xappiens_whatsapp.api.conversations import sync_conversations
+			result = sync_conversations(self.name)
+			self.reload()  # Recargar para mostrar estadísticas actualizadas
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error al sincronizar conversaciones {self.session_id}: {str(e)}")
 			return {"success": False, "message": str(e)}
 
