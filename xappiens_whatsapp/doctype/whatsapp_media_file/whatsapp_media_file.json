@@ -1,0 +1,288 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:WAMEDIA-{#####}",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1",
+  "message",
+  "session",
+  "conversation",
+  "column_break_2",
+  "media_type",
+  "status",
+  "section_break_file",
+  "file",
+  "filename",
+  "original_filename",
+  "column_break_file",
+  "filesize",
+  "mimetype",
+  "file_extension",
+  "section_break_preview",
+  "thumbnail",
+  "preview_url",
+  "column_break_preview",
+  "duration",
+  "dimensions",
+  "section_break_download",
+  "download_url",
+  "is_downloaded",
+  "downloaded_at",
+  "column_break_download",
+  "download_error",
+  "retry_count",
+  "section_break_metadata",
+  "caption",
+  "alt_text",
+  "column_break_metadata",
+  "metadata",
+  "raw_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Información Básica"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Mensaje",
+   "options": "WhatsApp Message",
+   "reqd": 1
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Sesión",
+   "options": "WhatsApp Session",
+   "reqd": 1
+  },
+  {
+   "fieldname": "conversation",
+   "fieldtype": "Link",
+   "label": "Conversación",
+   "options": "WhatsApp Conversation"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "media_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Tipo de Media",
+   "options": "image\nvideo\naudio\nvoice\ndocument\nsticker",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Estado",
+   "options": "Pending\nDownloading\nDownloaded\nFailed",
+   "default": "Pending"
+  },
+  {
+   "fieldname": "section_break_file",
+   "fieldtype": "Section Break",
+   "label": "Archivo"
+  },
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "Archivo"
+  },
+  {
+   "fieldname": "filename",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nombre del Archivo"
+  },
+  {
+   "fieldname": "original_filename",
+   "fieldtype": "Data",
+   "label": "Nombre Original"
+  },
+  {
+   "fieldname": "column_break_file",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filesize",
+   "fieldtype": "Int",
+   "label": "Tamaño (bytes)"
+  },
+  {
+   "fieldname": "mimetype",
+   "fieldtype": "Data",
+   "label": "MIME Type"
+  },
+  {
+   "fieldname": "file_extension",
+   "fieldtype": "Data",
+   "label": "Extensión"
+  },
+  {
+   "fieldname": "section_break_preview",
+   "fieldtype": "Section Break",
+   "label": "Preview"
+  },
+  {
+   "fieldname": "thumbnail",
+   "fieldtype": "Attach Image",
+   "label": "Miniatura"
+  },
+  {
+   "fieldname": "preview_url",
+   "fieldtype": "Data",
+   "label": "URL de Preview"
+  },
+  {
+   "fieldname": "column_break_preview",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "duration",
+   "fieldtype": "Float",
+   "label": "Duración (segundos)",
+   "precision": 2,
+   "description": "Para audio/video"
+  },
+  {
+   "fieldname": "dimensions",
+   "fieldtype": "Data",
+   "label": "Dimensiones",
+   "description": "Para imágenes/videos (ej: 1920x1080)"
+  },
+  {
+   "fieldname": "section_break_download",
+   "fieldtype": "Section Break",
+   "label": "Descarga"
+  },
+  {
+   "fieldname": "download_url",
+   "fieldtype": "Data",
+   "label": "URL de Descarga"
+  },
+  {
+   "fieldname": "is_downloaded",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Descargado",
+   "default": 0
+  },
+  {
+   "fieldname": "downloaded_at",
+   "fieldtype": "Datetime",
+   "label": "Descargado el"
+  },
+  {
+   "fieldname": "column_break_download",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "download_error",
+   "fieldtype": "Small Text",
+   "label": "Error de Descarga"
+  },
+  {
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Intentos de Descarga",
+   "default": 0
+  },
+  {
+   "fieldname": "section_break_metadata",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "fieldname": "caption",
+   "fieldtype": "Small Text",
+   "label": "Caption"
+  },
+  {
+   "fieldname": "alt_text",
+   "fieldtype": "Data",
+   "label": "Texto Alternativo"
+  },
+  {
+   "fieldname": "column_break_metadata",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "metadata",
+   "fieldtype": "JSON",
+   "label": "Metadata Adicional"
+  },
+  {
+   "fieldname": "raw_data",
+   "fieldtype": "JSON",
+   "label": "Datos Crudos de WhatsApp"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "indexes": [
+  "message unique",
+  "session,media_type",
+  "session,is_downloaded",
+  "conversation"
+ ],
+ "links": [],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Media File",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp User",
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "filename"
+}
+

@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "contact",
+  "contact_name",
+  "column_break_1",
+  "is_admin",
+  "is_super_admin",
+  "column_break_2",
+  "joined_at",
+  "added_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "contact",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Contacto",
+   "options": "WhatsApp Contact",
+   "reqd": 1
+  },
+  {
+   "fieldname": "contact_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nombre",
+   "fetch_from": "contact.name1"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_admin",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Es Admin",
+   "default": 0
+  },
+  {
+   "fieldname": "is_super_admin",
+   "fieldtype": "Check",
+   "label": "Es Super Admin",
+   "default": 0
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "joined_at",
+   "fieldtype": "Datetime",
+   "label": "Se Unió el",
+   "default": "Now"
+  },
+  {
+   "fieldname": "added_by",
+   "fieldtype": "Link",
+   "label": "Agregado Por",
+   "options": "WhatsApp Contact"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Group Participant",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
+

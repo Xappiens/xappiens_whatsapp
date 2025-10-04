@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:WALOG-{#####}",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "timestamp",
+  "session",
+  "column_break_1",
+  "event_type",
+  "action",
+  "status",
+  "section_break_details",
+  "user",
+  "ip_address",
+  "column_break_details",
+  "chat_id",
+  "contact_id",
+  "message_id",
+  "section_break_data",
+  "details",
+  "request_data",
+  "response_data",
+  "section_break_error",
+  "error_message",
+  "error_traceback"
+ ],
+ "fields": [
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Timestamp",
+   "reqd": 1,
+   "default": "Now"
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sesión",
+   "options": "WhatsApp Session"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Tipo de Evento",
+   "options": "Session\nMessage\nContact\nGroup\nWebhook\nAPI Call\nAI\nSystem\nError",
+   "reqd": 1
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Acción",
+   "reqd": 1,
+   "description": "Acción realizada (ej: send_message, connect_session)"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Estado",
+   "options": "Success\nFailed\nPending\nWarning",
+   "default": "Success",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_details",
+   "fieldtype": "Section Break",
+   "label": "Detalles"
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Usuario",
+   "options": "User"
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "Dirección IP"
+  },
+  {
+   "fieldname": "column_break_details",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "chat_id",
+   "fieldtype": "Data",
+   "label": "Chat ID"
+  },
+  {
+   "fieldname": "contact_id",
+   "fieldtype": "Data",
+   "label": "Contact ID"
+  },
+  {
+   "fieldname": "message_id",
+   "fieldtype": "Data",
+   "label": "Message ID"
+  },
+  {
+   "fieldname": "section_break_data",
+   "fieldtype": "Section Break",
+   "label": "Datos"
+  },
+  {
+   "fieldname": "details",
+   "fieldtype": "Small Text",
+   "label": "Detalles",
+   "description": "Descripción de la actividad"
+  },
+  {
+   "fieldname": "request_data",
+   "fieldtype": "JSON",
+   "label": "Datos de Request"
+  },
+  {
+   "fieldname": "response_data",
+   "fieldtype": "JSON",
+   "label": "Datos de Response"
+  },
+  {
+   "fieldname": "section_break_error",
+   "fieldtype": "Section Break",
+   "label": "Error",
+   "depends_on": "eval:doc.status=='Failed'"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Mensaje de Error"
+  },
+  {
+   "fieldname": "error_traceback",
+   "fieldtype": "Long Text",
+   "label": "Traceback del Error"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "indexes": [
+  "session,timestamp",
+  "session,event_type",
+  "session,status",
+  "user,timestamp",
+  "event_type,status"
+ ],
+ "links": [],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Activity Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "timestamp",
+ "sort_order": "DESC",
+ "states": []
+}
+

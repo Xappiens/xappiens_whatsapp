@@ -1,0 +1,315 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:agent_name",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1",
+  "agent_name",
+  "agent_id",
+  "column_break_2",
+  "is_active",
+  "is_default",
+  "section_break_config",
+  "description",
+  "system_prompt",
+  "column_break_config",
+  "model",
+  "temperature",
+  "max_tokens",
+  "section_break_trigger",
+  "auto_respond",
+  "trigger_keywords",
+  "trigger_pattern",
+  "column_break_trigger",
+  "response_delay",
+  "only_during_hours",
+  "business_hours_start",
+  "business_hours_end",
+  "section_break_sessions",
+  "assigned_sessions",
+  "section_break_stats",
+  "total_conversations",
+  "total_messages_processed",
+  "total_tokens_used",
+  "column_break_stats",
+  "avg_response_time",
+  "success_rate",
+  "last_used",
+  "section_break_logs",
+  "conversation_logs",
+  "section_break_metadata",
+  "metadata",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Información del Agente"
+  },
+  {
+   "fieldname": "agent_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nombre del Agente",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "agent_id",
+   "fieldtype": "Data",
+   "label": "Agent ID",
+   "description": "ID del agente en el servidor de IA"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Activo",
+   "default": 1
+  },
+  {
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Agente por Defecto",
+   "default": 0,
+   "description": "Usar este agente por defecto para nuevas conversaciones"
+  },
+  {
+   "fieldname": "section_break_config",
+   "fieldtype": "Section Break",
+   "label": "Configuración de IA"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Descripción"
+  },
+  {
+   "fieldname": "system_prompt",
+   "fieldtype": "Long Text",
+   "label": "Prompt del Sistema",
+   "reqd": 1,
+   "description": "Instrucciones para el agente de IA"
+  },
+  {
+   "fieldname": "column_break_config",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Select",
+   "label": "Modelo",
+   "options": "gpt-4\ngpt-4-turbo\ngpt-3.5-turbo\ngpt-4o\nclaude-3-opus\nclaude-3-sonnet",
+   "default": "gpt-4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "temperature",
+   "fieldtype": "Float",
+   "label": "Temperature",
+   "default": 0.7,
+   "precision": 2,
+   "description": "Creatividad del modelo (0-2)"
+  },
+  {
+   "fieldname": "max_tokens",
+   "fieldtype": "Int",
+   "label": "Max Tokens",
+   "default": 500,
+   "description": "Máximo de tokens en la respuesta"
+  },
+  {
+   "fieldname": "section_break_trigger",
+   "fieldtype": "Section Break",
+   "label": "Triggers y Automatización"
+  },
+  {
+   "fieldname": "auto_respond",
+   "fieldtype": "Check",
+   "label": "Respuesta Automática",
+   "default": 0,
+   "description": "Responder automáticamente a mensajes"
+  },
+  {
+   "fieldname": "trigger_keywords",
+   "fieldtype": "Small Text",
+   "label": "Palabras Clave",
+   "description": "Palabras clave que activan el agente (separadas por comas)"
+  },
+  {
+   "fieldname": "trigger_pattern",
+   "fieldtype": "Data",
+   "label": "Patrón de Trigger (Regex)",
+   "description": "Expresión regular para activar el agente"
+  },
+  {
+   "fieldname": "column_break_trigger",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "response_delay",
+   "fieldtype": "Int",
+   "label": "Delay de Respuesta (segundos)",
+   "default": 0,
+   "description": "Esperar antes de responder"
+  },
+  {
+   "fieldname": "only_during_hours",
+   "fieldtype": "Check",
+   "label": "Solo en Horario de Trabajo",
+   "default": 0
+  },
+  {
+   "fieldname": "business_hours_start",
+   "fieldtype": "Time",
+   "label": "Horario Inicio",
+   "depends_on": "eval:doc.only_during_hours==1"
+  },
+  {
+   "fieldname": "business_hours_end",
+   "fieldtype": "Time",
+   "label": "Horario Fin",
+   "depends_on": "eval:doc.only_during_hours==1"
+  },
+  {
+   "fieldname": "section_break_sessions",
+   "fieldtype": "Section Break",
+   "label": "Sesiones Asignadas"
+  },
+  {
+   "fieldname": "assigned_sessions",
+   "fieldtype": "Small Text",
+   "label": "Sesiones",
+   "description": "IDs de sesiones separados por comas"
+  },
+  {
+   "fieldname": "section_break_stats",
+   "fieldtype": "Section Break",
+   "label": "Estadísticas"
+  },
+  {
+   "fieldname": "total_conversations",
+   "fieldtype": "Int",
+   "label": "Total Conversaciones",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_messages_processed",
+   "fieldtype": "Int",
+   "label": "Mensajes Procesados",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_tokens_used",
+   "fieldtype": "Int",
+   "label": "Tokens Utilizados",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "avg_response_time",
+   "fieldtype": "Float",
+   "label": "Tiempo Promedio de Respuesta (seg)",
+   "precision": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "success_rate",
+   "fieldtype": "Percent",
+   "label": "Tasa de Éxito",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_used",
+   "fieldtype": "Datetime",
+   "label": "Último Uso",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_logs",
+   "fieldtype": "Section Break",
+   "label": "Logs de Conversaciones"
+  },
+  {
+   "fieldname": "conversation_logs",
+   "fieldtype": "Table",
+   "label": "Logs",
+   "options": "WhatsApp AI Conversation Log"
+  },
+  {
+   "fieldname": "section_break_metadata",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "fieldname": "metadata",
+   "fieldtype": "JSON",
+   "label": "Metadata Adicional"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notas"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "indexes": [
+  "is_active",
+  "is_default",
+  "last_used"
+ ],
+ "links": [],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp AI Agent",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "agent_name",
+ "track_changes": 1
+}
+

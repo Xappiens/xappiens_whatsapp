@@ -1,0 +1,30 @@
+# Enlace simbólico creado automáticamente en instalación
+xappiens_whatsapp/xappiens_whatsapp/xappiens_whatsapp
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.pyc
+*.pyo
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+.cache/

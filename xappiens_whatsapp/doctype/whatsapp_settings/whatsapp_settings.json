@@ -1,0 +1,384 @@
+{
+ "actions": [],
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1",
+  "enabled",
+  "default_session",
+  "column_break_2",
+  "auto_sync_enabled",
+  "sync_interval",
+  "section_break_api",
+  "api_base_url",
+  "api_key",
+  "column_break_api",
+  "api_timeout",
+  "api_retry_attempts",
+  "section_break_webhook",
+  "webhook_enabled",
+  "webhook_secret",
+  "webhook_events",
+  "column_break_webhook",
+  "webhook_timeout",
+  "webhook_retry_attempts",
+  "section_break_ai",
+  "ai_enabled",
+  "default_ai_agent",
+  "column_break_ai",
+  "openai_api_key",
+  "ai_model",
+  "section_break_features",
+  "enable_auto_response",
+  "enable_read_receipts",
+  "enable_typing_indicator",
+  "column_break_features",
+  "enable_media_download",
+  "enable_contact_sync",
+  "enable_group_sync",
+  "section_break_notifications",
+  "notify_on_new_message",
+  "notify_on_connection_change",
+  "column_break_notifications",
+  "notification_users",
+  "notification_email",
+  "section_break_storage",
+  "max_media_size",
+  "media_storage_path",
+  "column_break_storage",
+  "auto_delete_media_days",
+  "max_log_retention_days",
+  "section_break_rate_limit",
+  "rate_limit_enabled",
+  "rate_limit_messages_per_minute",
+  "column_break_rate_limit",
+  "rate_limit_messages_per_hour",
+  "rate_limit_messages_per_day"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Configuración General"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Habilitado",
+   "default": 1,
+   "description": "Habilitar módulo de WhatsApp"
+  },
+  {
+   "fieldname": "default_session",
+   "fieldtype": "Link",
+   "label": "Sesión por Defecto",
+   "options": "WhatsApp Session"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "auto_sync_enabled",
+   "fieldtype": "Check",
+   "label": "Sincronización Automática",
+   "default": 1
+  },
+  {
+   "fieldname": "sync_interval",
+   "fieldtype": "Int",
+   "label": "Intervalo de Sincronización (minutos)",
+   "default": 5,
+   "depends_on": "eval:doc.auto_sync_enabled==1"
+  },
+  {
+   "fieldname": "section_break_api",
+   "fieldtype": "Section Break",
+   "label": "Configuración de API"
+  },
+  {
+   "fieldname": "api_base_url",
+   "fieldtype": "Data",
+   "label": "URL Base de API",
+   "reqd": 1,
+   "description": "URL del servidor de WhatsApp (ej: http://localhost:8084)"
+  },
+  {
+   "fieldname": "api_key",
+   "fieldtype": "Password",
+   "label": "API Key",
+   "description": "Clave de API para autenticación"
+  },
+  {
+   "fieldname": "column_break_api",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_timeout",
+   "fieldtype": "Int",
+   "label": "Timeout de API (segundos)",
+   "default": 30
+  },
+  {
+   "fieldname": "api_retry_attempts",
+   "fieldtype": "Int",
+   "label": "Intentos de Reintento",
+   "default": 3
+  },
+  {
+   "fieldname": "section_break_webhook",
+   "fieldtype": "Section Break",
+   "label": "Configuración de Webhooks"
+  },
+  {
+   "fieldname": "webhook_enabled",
+   "fieldtype": "Check",
+   "label": "Webhooks Habilitados",
+   "default": 1
+  },
+  {
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  },
+  {
+   "fieldname": "webhook_events",
+   "fieldtype": "Small Text",
+   "label": "Eventos de Webhook",
+   "description": "Eventos separados por comas (ej: message,message_ack,presence_update)"
+  },
+  {
+   "fieldname": "column_break_webhook",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "webhook_timeout",
+   "fieldtype": "Int",
+   "label": "Webhook Timeout (ms)",
+   "default": 30000
+  },
+  {
+   "fieldname": "webhook_retry_attempts",
+   "fieldtype": "Int",
+   "label": "Reintentos de Webhook",
+   "default": 3
+  },
+  {
+   "fieldname": "section_break_ai",
+   "fieldtype": "Section Break",
+   "label": "Configuración de IA"
+  },
+  {
+   "fieldname": "ai_enabled",
+   "fieldtype": "Check",
+   "label": "IA Habilitada",
+   "default": 0
+  },
+  {
+   "fieldname": "default_ai_agent",
+   "fieldtype": "Link",
+   "label": "Agente IA por Defecto",
+   "options": "WhatsApp AI Agent",
+   "depends_on": "eval:doc.ai_enabled==1"
+  },
+  {
+   "fieldname": "column_break_ai",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "openai_api_key",
+   "fieldtype": "Password",
+   "label": "OpenAI API Key",
+   "depends_on": "eval:doc.ai_enabled==1"
+  },
+  {
+   "fieldname": "ai_model",
+   "fieldtype": "Select",
+   "label": "Modelo de IA",
+   "options": "gpt-4\ngpt-4-turbo\ngpt-3.5-turbo\ngpt-4o",
+   "default": "gpt-4",
+   "depends_on": "eval:doc.ai_enabled==1"
+  },
+  {
+   "fieldname": "section_break_features",
+   "fieldtype": "Section Break",
+   "label": "Características"
+  },
+  {
+   "fieldname": "enable_auto_response",
+   "fieldtype": "Check",
+   "label": "Respuesta Automática",
+   "default": 0
+  },
+  {
+   "fieldname": "enable_read_receipts",
+   "fieldtype": "Check",
+   "label": "Confirmaciones de Lectura",
+   "default": 1
+  },
+  {
+   "fieldname": "enable_typing_indicator",
+   "fieldtype": "Check",
+   "label": "Indicador de Escritura",
+   "default": 1
+  },
+  {
+   "fieldname": "column_break_features",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enable_media_download",
+   "fieldtype": "Check",
+   "label": "Descarga Automática de Media",
+   "default": 1
+  },
+  {
+   "fieldname": "enable_contact_sync",
+   "fieldtype": "Check",
+   "label": "Sincronización de Contactos",
+   "default": 1
+  },
+  {
+   "fieldname": "enable_group_sync",
+   "fieldtype": "Check",
+   "label": "Sincronización de Grupos",
+   "default": 1
+  },
+  {
+   "fieldname": "section_break_notifications",
+   "fieldtype": "Section Break",
+   "label": "Notificaciones"
+  },
+  {
+   "fieldname": "notify_on_new_message",
+   "fieldtype": "Check",
+   "label": "Notificar Nuevos Mensajes",
+   "default": 1
+  },
+  {
+   "fieldname": "notify_on_connection_change",
+   "fieldtype": "Check",
+   "label": "Notificar Cambios de Conexión",
+   "default": 1
+  },
+  {
+   "fieldname": "column_break_notifications",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "notification_users",
+   "fieldtype": "Small Text",
+   "label": "Usuarios para Notificar",
+   "description": "Emails separados por comas"
+  },
+  {
+   "fieldname": "notification_email",
+   "fieldtype": "Data",
+   "label": "Email de Notificación"
+  },
+  {
+   "fieldname": "section_break_storage",
+   "fieldtype": "Section Break",
+   "label": "Almacenamiento"
+  },
+  {
+   "fieldname": "max_media_size",
+   "fieldtype": "Int",
+   "label": "Tamaño Máximo de Media (MB)",
+   "default": 16
+  },
+  {
+   "fieldname": "media_storage_path",
+   "fieldtype": "Data",
+   "label": "Ruta de Almacenamiento de Media",
+   "default": "/public/files/whatsapp_media"
+  },
+  {
+   "fieldname": "column_break_storage",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "auto_delete_media_days",
+   "fieldtype": "Int",
+   "label": "Auto-Eliminar Media después de (días)",
+   "default": 90,
+   "description": "0 = nunca eliminar"
+  },
+  {
+   "fieldname": "max_log_retention_days",
+   "fieldtype": "Int",
+   "label": "Retención de Logs (días)",
+   "default": 30
+  },
+  {
+   "fieldname": "section_break_rate_limit",
+   "fieldtype": "Section Break",
+   "label": "Rate Limiting"
+  },
+  {
+   "fieldname": "rate_limit_enabled",
+   "fieldtype": "Check",
+   "label": "Rate Limiting Habilitado",
+   "default": 1
+  },
+  {
+   "fieldname": "rate_limit_messages_per_minute",
+   "fieldtype": "Int",
+   "label": "Mensajes por Minuto",
+   "default": 20,
+   "depends_on": "eval:doc.rate_limit_enabled==1"
+  },
+  {
+   "fieldname": "column_break_rate_limit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rate_limit_messages_per_hour",
+   "fieldtype": "Int",
+   "label": "Mensajes por Hora",
+   "default": 1000,
+   "depends_on": "eval:doc.rate_limit_enabled==1"
+  },
+  {
+   "fieldname": "rate_limit_messages_per_day",
+   "fieldtype": "Int",
+   "label": "Mensajes por Día",
+   "default": 10000,
+   "depends_on": "eval:doc.rate_limit_enabled==1"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "WhatsApp Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
+

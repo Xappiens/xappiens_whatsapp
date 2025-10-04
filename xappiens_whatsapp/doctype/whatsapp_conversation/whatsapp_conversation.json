@@ -1,0 +1,426 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:WACONV-{####}",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1",
+  "session",
+  "chat_id",
+  "contact",
+  "column_break_2",
+  "contact_name",
+  "phone_number",
+  "status",
+  "section_break_type",
+  "is_group",
+  "group",
+  "is_broadcast",
+  "column_break_type",
+  "is_read_only",
+  "is_archived",
+  "is_pinned",
+  "section_break_messages",
+  "last_message",
+  "last_message_time",
+  "last_message_from_me",
+  "column_break_messages",
+  "unread_count",
+  "total_messages",
+  "first_message_time",
+  "section_break_mute",
+  "is_muted",
+  "mute_expiration",
+  "column_break_mute",
+  "notifications_enabled",
+  "custom_notification_sound",
+  "section_break_assignment",
+  "assigned_to",
+  "assigned_at",
+  "column_break_assignment",
+  "assigned_by",
+  "assignment_notes",
+  "section_break_relations",
+  "linked_lead",
+  "linked_customer",
+  "linked_deal",
+  "section_break_labels",
+  "labels",
+  "tags",
+  "priority",
+  "section_break_metadata",
+  "metadata",
+  "custom_fields",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Información Básica"
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sesión",
+   "options": "WhatsApp Session",
+   "reqd": 1
+  },
+  {
+   "fieldname": "chat_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Chat ID",
+   "reqd": 1,
+   "description": "ID del chat en WhatsApp (ej: 34657032985@c.us)"
+  },
+  {
+   "fieldname": "contact",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Contacto",
+   "options": "WhatsApp Contact",
+   "description": "Contacto vinculado (si no es grupo)"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "contact_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nombre del Contacto",
+   "description": "Nombre del contacto o grupo"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "label": "Número de Teléfono",
+   "description": "Número extraído del chat_id"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Estado",
+   "options": "Active\nInactive\nArchived\nBlocked",
+   "default": "Active",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_type",
+   "fieldtype": "Section Break",
+   "label": "Tipo de Conversación"
+  },
+  {
+   "fieldname": "is_group",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Es Grupo",
+   "default": 0
+  },
+  {
+   "fieldname": "group",
+   "fieldtype": "Link",
+   "label": "Grupo",
+   "options": "WhatsApp Group",
+   "depends_on": "eval:doc.is_group==1",
+   "description": "Grupo vinculado si es conversación de grupo"
+  },
+  {
+   "fieldname": "is_broadcast",
+   "fieldtype": "Check",
+   "label": "Es Lista de Difusión",
+   "default": 0
+  },
+  {
+   "fieldname": "column_break_type",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_read_only",
+   "fieldtype": "Check",
+   "label": "Solo Lectura",
+   "default": 0,
+   "description": "Si la conversación es de solo lectura"
+  },
+  {
+   "fieldname": "is_archived",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Archivada",
+   "default": 0
+  },
+  {
+   "fieldname": "is_pinned",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Fijada",
+   "default": 0
+  },
+  {
+   "fieldname": "section_break_messages",
+   "fieldtype": "Section Break",
+   "label": "Mensajes"
+  },
+  {
+   "fieldname": "last_message",
+   "fieldtype": "Small Text",
+   "label": "Último Mensaje",
+   "description": "Contenido del último mensaje"
+  },
+  {
+   "fieldname": "last_message_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Hora Último Mensaje",
+   "description": "Fecha y hora del último mensaje"
+  },
+  {
+   "fieldname": "last_message_from_me",
+   "fieldtype": "Check",
+   "label": "Último Mensaje de Mí",
+   "default": 0,
+   "description": "Si el último mensaje fue enviado por mí"
+  },
+  {
+   "fieldname": "column_break_messages",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "unread_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "No Leídos",
+   "default": 0,
+   "description": "Cantidad de mensajes no leídos"
+  },
+  {
+   "fieldname": "total_messages",
+   "fieldtype": "Int",
+   "label": "Total de Mensajes",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "first_message_time",
+   "fieldtype": "Datetime",
+   "label": "Primer Mensaje",
+   "read_only": 1,
+   "description": "Fecha del primer mensaje"
+  },
+  {
+   "fieldname": "section_break_mute",
+   "fieldtype": "Section Break",
+   "label": "Notificaciones"
+  },
+  {
+   "fieldname": "is_muted",
+   "fieldtype": "Check",
+   "label": "Silenciada",
+   "default": 0
+  },
+  {
+   "fieldname": "mute_expiration",
+   "fieldtype": "Datetime",
+   "label": "Silenciar Hasta",
+   "depends_on": "eval:doc.is_muted==1"
+  },
+  {
+   "fieldname": "column_break_mute",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "notifications_enabled",
+   "fieldtype": "Check",
+   "label": "Notificaciones Habilitadas",
+   "default": 1
+  },
+  {
+   "fieldname": "custom_notification_sound",
+   "fieldtype": "Data",
+   "label": "Sonido de Notificación Personalizado"
+  },
+  {
+   "fieldname": "section_break_assignment",
+   "fieldtype": "Section Break",
+   "label": "Asignación"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Asignado a",
+   "options": "User",
+   "description": "Usuario asignado para atender esta conversación"
+  },
+  {
+   "fieldname": "assigned_at",
+   "fieldtype": "Datetime",
+   "label": "Asignado el",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_assignment",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assigned_by",
+   "fieldtype": "Link",
+   "label": "Asignado por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "assignment_notes",
+   "fieldtype": "Small Text",
+   "label": "Notas de Asignación"
+  },
+  {
+   "fieldname": "section_break_relations",
+   "fieldtype": "Section Break",
+   "label": "Relaciones con CRM"
+  },
+  {
+   "fieldname": "linked_lead",
+   "fieldtype": "Link",
+   "label": "Lead Vinculado",
+   "options": "Lead"
+  },
+  {
+   "fieldname": "linked_customer",
+   "fieldtype": "Link",
+   "label": "Cliente Vinculado",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "linked_deal",
+   "fieldtype": "Link",
+   "label": "Deal Vinculado",
+   "options": "CRM Deal"
+  },
+  {
+   "fieldname": "section_break_labels",
+   "fieldtype": "Section Break",
+   "label": "Etiquetas y Prioridad"
+  },
+  {
+   "fieldname": "labels",
+   "fieldtype": "Small Text",
+   "label": "Etiquetas",
+   "description": "Etiquetas separadas por comas"
+  },
+  {
+   "fieldname": "tags",
+   "fieldtype": "Small Text",
+   "label": "Tags"
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Prioridad",
+   "options": "\nLow\nMedium\nHigh\nUrgent",
+   "default": "Medium"
+  },
+  {
+   "fieldname": "section_break_metadata",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "fieldname": "metadata",
+   "fieldtype": "JSON",
+   "label": "Metadata",
+   "description": "Datos adicionales en formato JSON"
+  },
+  {
+   "fieldname": "custom_fields",
+   "fieldtype": "JSON",
+   "label": "Campos Personalizados"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notas"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "indexes": [
+  "session,chat_id unique",
+  "session,contact",
+  "session,is_group",
+  "session,status",
+  "session,last_message_time",
+  "assigned_to",
+  "linked_lead",
+  "linked_customer",
+  "linked_deal"
+ ],
+ "links": [
+  {
+   "link_doctype": "WhatsApp Message",
+   "link_fieldname": "conversation"
+  }
+ ],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Conversation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "contact_name,phone_number",
+ "sort_field": "last_message_time",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "contact_name",
+ "track_changes": 1,
+ "track_seen": 1
+}
+

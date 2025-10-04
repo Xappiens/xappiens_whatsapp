@@ -1,0 +1,231 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:WAWHOOK-{#####}",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "timestamp",
+  "session",
+  "column_break_1",
+  "event_type",
+  "webhook_id",
+  "status",
+  "section_break_request",
+  "request_headers",
+  "request_body",
+  "column_break_request",
+  "webhook_url",
+  "webhook_method",
+  "section_break_response",
+  "response_status_code",
+  "response_time",
+  "column_break_response",
+  "response_body",
+  "response_headers",
+  "section_break_retry",
+  "retry_count",
+  "max_retries",
+  "column_break_retry",
+  "next_retry_at",
+  "last_retry_at",
+  "section_break_error",
+  "error_message",
+  "error_details"
+ ],
+ "fields": [
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Timestamp",
+   "reqd": 1,
+   "default": "Now"
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sesión",
+   "options": "WhatsApp Session"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Tipo de Evento",
+   "options": "message\nmessage_ack\nmessage_create\nmessage_revoke\nmessage_edit\npresence_update\ngroup_update\ngroup_participants\ngroup_admin\ngroup_leave\ngroup_join\ncontact_update\nchat_update\nbattery_update\nconnection_update",
+   "reqd": 1
+  },
+  {
+   "fieldname": "webhook_id",
+   "fieldtype": "Data",
+   "label": "Webhook ID",
+   "unique": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Estado",
+   "options": "Success\nFailed\nPending\nRetrying",
+   "default": "Pending",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_request",
+   "fieldtype": "Section Break",
+   "label": "Request"
+  },
+  {
+   "fieldname": "request_headers",
+   "fieldtype": "JSON",
+   "label": "Headers del Request"
+  },
+  {
+   "fieldname": "request_body",
+   "fieldtype": "JSON",
+   "label": "Body del Request"
+  },
+  {
+   "fieldname": "column_break_request",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "webhook_url",
+   "fieldtype": "Data",
+   "label": "Webhook URL"
+  },
+  {
+   "fieldname": "webhook_method",
+   "fieldtype": "Select",
+   "label": "Método HTTP",
+   "options": "POST\nPUT\nPATCH",
+   "default": "POST"
+  },
+  {
+   "fieldname": "section_break_response",
+   "fieldtype": "Section Break",
+   "label": "Response"
+  },
+  {
+   "fieldname": "response_status_code",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Status Code"
+  },
+  {
+   "fieldname": "response_time",
+   "fieldtype": "Float",
+   "label": "Tiempo de Respuesta (ms)",
+   "precision": 2
+  },
+  {
+   "fieldname": "column_break_response",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "response_body",
+   "fieldtype": "JSON",
+   "label": "Response Body"
+  },
+  {
+   "fieldname": "response_headers",
+   "fieldtype": "JSON",
+   "label": "Response Headers"
+  },
+  {
+   "fieldname": "section_break_retry",
+   "fieldtype": "Section Break",
+   "label": "Reintentos"
+  },
+  {
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Conteo de Reintentos",
+   "default": 0
+  },
+  {
+   "fieldname": "max_retries",
+   "fieldtype": "Int",
+   "label": "Máximo de Reintentos",
+   "default": 3
+  },
+  {
+   "fieldname": "column_break_retry",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "next_retry_at",
+   "fieldtype": "Datetime",
+   "label": "Próximo Reintento"
+  },
+  {
+   "fieldname": "last_retry_at",
+   "fieldtype": "Datetime",
+   "label": "Último Reintento"
+  },
+  {
+   "fieldname": "section_break_error",
+   "fieldtype": "Section Break",
+   "label": "Error",
+   "depends_on": "eval:doc.status=='Failed'"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Mensaje de Error"
+  },
+  {
+   "fieldname": "error_details",
+   "fieldtype": "Long Text",
+   "label": "Detalles del Error"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "indexes": [
+  "session,timestamp",
+  "session,event_type",
+  "status",
+  "webhook_id unique"
+ ],
+ "links": [],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Webhook Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "timestamp",
+ "sort_order": "DESC",
+ "states": []
+}
+

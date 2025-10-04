@@ -1,0 +1,183 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:label_name",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "label_name",
+  "label_id",
+  "column_break_1",
+  "color",
+  "is_active",
+  "section_break_sessions",
+  "session",
+  "applies_to",
+  "section_break_stats",
+  "total_conversations",
+  "total_messages",
+  "column_break_stats",
+  "last_used",
+  "created_at",
+  "section_break_metadata",
+  "description",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "label_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nombre",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "label_id",
+   "fieldtype": "Data",
+   "label": "Label ID",
+   "description": "ID de la etiqueta en WhatsApp API"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Color",
+   "in_list_view": 1,
+   "label": "Color",
+   "default": "#3498db"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Activa",
+   "default": 1
+  },
+  {
+   "fieldname": "section_break_sessions",
+   "fieldtype": "Section Break",
+   "label": "Configuración"
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Sesión",
+   "options": "WhatsApp Session",
+   "description": "Sesión específica (vacío = todas)"
+  },
+  {
+   "fieldname": "applies_to",
+   "fieldtype": "Select",
+   "label": "Se Aplica a",
+   "options": "Conversations\nContacts\nBoth",
+   "default": "Conversations"
+  },
+  {
+   "fieldname": "section_break_stats",
+   "fieldtype": "Section Break",
+   "label": "Estadísticas"
+  },
+  {
+   "fieldname": "total_conversations",
+   "fieldtype": "Int",
+   "label": "Total Conversaciones",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_messages",
+   "fieldtype": "Int",
+   "label": "Total Mensajes",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_used",
+   "fieldtype": "Datetime",
+   "label": "Último Uso",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Creado el",
+   "default": "Now",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_metadata",
+   "fieldtype": "Section Break",
+   "label": "Descripción"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Descripción"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notas"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Label",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "label_name"
+}
+

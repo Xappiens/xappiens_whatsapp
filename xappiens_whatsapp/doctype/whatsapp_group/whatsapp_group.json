@@ -1,0 +1,264 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:group_id",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1",
+  "group_id",
+  "session",
+  "group_name",
+  "column_break_2",
+  "description",
+  "status",
+  "created_at",
+  "section_break_invite",
+  "invite_code",
+  "invite_code_revoked_at",
+  "column_break_invite",
+  "invite_url",
+  "join_approval_mode",
+  "section_break_participants",
+  "participants",
+  "participant_count",
+  "admin_count",
+  "section_break_settings",
+  "owner_contact",
+  "created_by_me",
+  "column_break_settings",
+  "only_admins_can_send",
+  "only_admins_can_edit_info",
+  "section_break_metadata",
+  "group_pic_url",
+  "last_activity",
+  "column_break_metadata",
+  "metadata",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Información del Grupo"
+  },
+  {
+   "fieldname": "group_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Group ID",
+   "reqd": 1,
+   "unique": 1,
+   "description": "ID del grupo (ej: 120363027717771992@g.us)"
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sesión",
+   "options": "WhatsApp Session",
+   "reqd": 1
+  },
+  {
+   "fieldname": "group_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nombre del Grupo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Descripción del Grupo"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Estado",
+   "options": "Active\nInactive\nLeft",
+   "default": "Active"
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Creado el",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_invite",
+   "fieldtype": "Section Break",
+   "label": "Código de Invitación"
+  },
+  {
+   "fieldname": "invite_code",
+   "fieldtype": "Data",
+   "label": "Código de Invitación"
+  },
+  {
+   "fieldname": "invite_code_revoked_at",
+   "fieldtype": "Datetime",
+   "label": "Código Revocado el"
+  },
+  {
+   "fieldname": "column_break_invite",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invite_url",
+   "fieldtype": "Data",
+   "label": "URL de Invitación",
+   "read_only": 1
+  },
+  {
+   "fieldname": "join_approval_mode",
+   "fieldtype": "Select",
+   "label": "Modo de Aprobación",
+   "options": "Anyone\nAdmins Only",
+   "default": "Anyone"
+  },
+  {
+   "fieldname": "section_break_participants",
+   "fieldtype": "Section Break",
+   "label": "Participantes"
+  },
+  {
+   "fieldname": "participants",
+   "fieldtype": "Table",
+   "label": "Participantes",
+   "options": "WhatsApp Group Participant"
+  },
+  {
+   "fieldname": "participant_count",
+   "fieldtype": "Int",
+   "label": "Total Participantes",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "admin_count",
+   "fieldtype": "Int",
+   "label": "Total Administradores",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_settings",
+   "fieldtype": "Section Break",
+   "label": "Configuración"
+  },
+  {
+   "fieldname": "owner_contact",
+   "fieldtype": "Link",
+   "label": "Propietario",
+   "options": "WhatsApp Contact"
+  },
+  {
+   "fieldname": "created_by_me",
+   "fieldtype": "Check",
+   "label": "Creado por Mí",
+   "default": 0
+  },
+  {
+   "fieldname": "column_break_settings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "only_admins_can_send",
+   "fieldtype": "Check",
+   "label": "Solo Admins Pueden Enviar",
+   "default": 0
+  },
+  {
+   "fieldname": "only_admins_can_edit_info",
+   "fieldtype": "Check",
+   "label": "Solo Admins Pueden Editar Info",
+   "default": 0
+  },
+  {
+   "fieldname": "section_break_metadata",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "fieldname": "group_pic_url",
+   "fieldtype": "Data",
+   "label": "URL Foto del Grupo"
+  },
+  {
+   "fieldname": "last_activity",
+   "fieldtype": "Datetime",
+   "label": "Última Actividad"
+  },
+  {
+   "fieldname": "column_break_metadata",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "metadata",
+   "fieldtype": "JSON",
+   "label": "Metadata"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notas"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "indexes": [
+  "session,status",
+  "session,created_at"
+ ],
+ "links": [
+  {
+   "link_doctype": "WhatsApp Conversation",
+   "link_fieldname": "group"
+  }
+ ],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Group",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "group_name",
+ "track_changes": 1
+}
+

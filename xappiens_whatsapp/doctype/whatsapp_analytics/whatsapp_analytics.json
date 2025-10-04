@@ -1,0 +1,392 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:WAANAL-{YYYY}-{MM}-{DD}-{session}",
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1",
+  "date",
+  "session",
+  "column_break_2",
+  "period_type",
+  "period_start",
+  "period_end",
+  "section_break_messages",
+  "total_messages_sent",
+  "total_messages_received",
+  "total_messages",
+  "column_break_messages",
+  "messages_with_media",
+  "messages_forwarded",
+  "messages_starred",
+  "section_break_conversations",
+  "total_conversations",
+  "new_conversations",
+  "active_conversations",
+  "column_break_conversations",
+  "archived_conversations",
+  "conversation_growth_rate",
+  "section_break_contacts",
+  "total_contacts",
+  "new_contacts",
+  "blocked_contacts",
+  "section_break_response",
+  "avg_response_time",
+  "median_response_time",
+  "column_break_response",
+  "fastest_response",
+  "slowest_response",
+  "section_break_engagement",
+  "total_unique_users",
+  "messages_per_conversation",
+  "column_break_engagement",
+  "engagement_rate",
+  "response_rate",
+  "section_break_webhooks",
+  "total_webhooks_received",
+  "webhooks_processed",
+  "column_break_webhooks",
+  "webhook_errors",
+  "webhook_success_rate",
+  "section_break_ai",
+  "ai_messages_processed",
+  "ai_tokens_used",
+  "column_break_ai",
+  "ai_cost_estimate",
+  "ai_response_time",
+  "section_break_raw",
+  "raw_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Información del Período"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Fecha",
+   "reqd": 1
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sesión",
+   "options": "WhatsApp Session",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "period_type",
+   "fieldtype": "Select",
+   "label": "Tipo de Período",
+   "options": "Daily\nWeekly\nMonthly",
+   "default": "Daily"
+  },
+  {
+   "fieldname": "period_start",
+   "fieldtype": "Datetime",
+   "label": "Inicio del Período"
+  },
+  {
+   "fieldname": "period_end",
+   "fieldtype": "Datetime",
+   "label": "Fin del Período"
+  },
+  {
+   "fieldname": "section_break_messages",
+   "fieldtype": "Section Break",
+   "label": "Métricas de Mensajes"
+  },
+  {
+   "fieldname": "total_messages_sent",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Mensajes Enviados",
+   "default": 0
+  },
+  {
+   "fieldname": "total_messages_received",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Mensajes Recibidos",
+   "default": 0
+  },
+  {
+   "fieldname": "total_messages",
+   "fieldtype": "Int",
+   "label": "Total Mensajes",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_messages",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "messages_with_media",
+   "fieldtype": "Int",
+   "label": "Mensajes con Media",
+   "default": 0
+  },
+  {
+   "fieldname": "messages_forwarded",
+   "fieldtype": "Int",
+   "label": "Mensajes Reenviados",
+   "default": 0
+  },
+  {
+   "fieldname": "messages_starred",
+   "fieldtype": "Int",
+   "label": "Mensajes Destacados",
+   "default": 0
+  },
+  {
+   "fieldname": "section_break_conversations",
+   "fieldtype": "Section Break",
+   "label": "Métricas de Conversaciones"
+  },
+  {
+   "fieldname": "total_conversations",
+   "fieldtype": "Int",
+   "label": "Total Conversaciones",
+   "default": 0
+  },
+  {
+   "fieldname": "new_conversations",
+   "fieldtype": "Int",
+   "label": "Conversaciones Nuevas",
+   "default": 0
+  },
+  {
+   "fieldname": "active_conversations",
+   "fieldtype": "Int",
+   "label": "Conversaciones Activas",
+   "default": 0
+  },
+  {
+   "fieldname": "column_break_conversations",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "archived_conversations",
+   "fieldtype": "Int",
+   "label": "Conversaciones Archivadas",
+   "default": 0
+  },
+  {
+   "fieldname": "conversation_growth_rate",
+   "fieldtype": "Percent",
+   "label": "Tasa de Crecimiento (%)"
+  },
+  {
+   "fieldname": "section_break_contacts",
+   "fieldtype": "Section Break",
+   "label": "Métricas de Contactos"
+  },
+  {
+   "fieldname": "total_contacts",
+   "fieldtype": "Int",
+   "label": "Total Contactos",
+   "default": 0
+  },
+  {
+   "fieldname": "new_contacts",
+   "fieldtype": "Int",
+   "label": "Contactos Nuevos",
+   "default": 0
+  },
+  {
+   "fieldname": "blocked_contacts",
+   "fieldtype": "Int",
+   "label": "Contactos Bloqueados",
+   "default": 0
+  },
+  {
+   "fieldname": "section_break_response",
+   "fieldtype": "Section Break",
+   "label": "Tiempo de Respuesta"
+  },
+  {
+   "fieldname": "avg_response_time",
+   "fieldtype": "Float",
+   "label": "Tiempo Promedio (minutos)",
+   "precision": 2
+  },
+  {
+   "fieldname": "median_response_time",
+   "fieldtype": "Float",
+   "label": "Tiempo Mediano (minutos)",
+   "precision": 2
+  },
+  {
+   "fieldname": "column_break_response",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fastest_response",
+   "fieldtype": "Float",
+   "label": "Respuesta Más Rápida (minutos)",
+   "precision": 2
+  },
+  {
+   "fieldname": "slowest_response",
+   "fieldtype": "Float",
+   "label": "Respuesta Más Lenta (minutos)",
+   "precision": 2
+  },
+  {
+   "fieldname": "section_break_engagement",
+   "fieldtype": "Section Break",
+   "label": "Engagement"
+  },
+  {
+   "fieldname": "total_unique_users",
+   "fieldtype": "Int",
+   "label": "Usuarios Únicos",
+   "default": 0
+  },
+  {
+   "fieldname": "messages_per_conversation",
+   "fieldtype": "Float",
+   "label": "Mensajes por Conversación",
+   "precision": 2
+  },
+  {
+   "fieldname": "column_break_engagement",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "engagement_rate",
+   "fieldtype": "Percent",
+   "label": "Tasa de Engagement (%)"
+  },
+  {
+   "fieldname": "response_rate",
+   "fieldtype": "Percent",
+   "label": "Tasa de Respuesta (%)"
+  },
+  {
+   "fieldname": "section_break_webhooks",
+   "fieldtype": "Section Break",
+   "label": "Webhooks"
+  },
+  {
+   "fieldname": "total_webhooks_received",
+   "fieldtype": "Int",
+   "label": "Webhooks Recibidos",
+   "default": 0
+  },
+  {
+   "fieldname": "webhooks_processed",
+   "fieldtype": "Int",
+   "label": "Webhooks Procesados",
+   "default": 0
+  },
+  {
+   "fieldname": "column_break_webhooks",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "webhook_errors",
+   "fieldtype": "Int",
+   "label": "Errores de Webhook",
+   "default": 0
+  },
+  {
+   "fieldname": "webhook_success_rate",
+   "fieldtype": "Percent",
+   "label": "Tasa de Éxito Webhooks (%)"
+  },
+  {
+   "fieldname": "section_break_ai",
+   "fieldtype": "Section Break",
+   "label": "IA"
+  },
+  {
+   "fieldname": "ai_messages_processed",
+   "fieldtype": "Int",
+   "label": "Mensajes Procesados por IA",
+   "default": 0
+  },
+  {
+   "fieldname": "ai_tokens_used",
+   "fieldtype": "Int",
+   "label": "Tokens de IA Utilizados",
+   "default": 0
+  },
+  {
+   "fieldname": "column_break_ai",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ai_cost_estimate",
+   "fieldtype": "Currency",
+   "label": "Costo Estimado de IA"
+  },
+  {
+   "fieldname": "ai_response_time",
+   "fieldtype": "Float",
+   "label": "Tiempo Promedio Respuesta IA (seg)",
+   "precision": 2
+  },
+  {
+   "fieldname": "section_break_raw",
+   "fieldtype": "Section Break",
+   "label": "Datos Crudos"
+  },
+  {
+   "fieldname": "raw_data",
+   "fieldtype": "JSON",
+   "label": "Datos Crudos"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "indexes": [
+  "date,session unique",
+  "session,date",
+  "period_type,date"
+ ],
+ "links": [],
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Analytics",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "WhatsApp Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "date",
+ "sort_order": "DESC",
+ "states": []
+}
+

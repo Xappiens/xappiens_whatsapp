@@ -1,0 +1,66 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-03 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "role",
+  "can_send_messages",
+  "can_view_all_conversations",
+  "assigned_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Usuario",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Rol",
+   "options": "Manager\nAgent\nViewer",
+   "default": "Agent",
+   "reqd": 1
+  },
+  {
+   "fieldname": "can_send_messages",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Puede Enviar Mensajes",
+   "default": 1
+  },
+  {
+   "fieldname": "can_view_all_conversations",
+   "fieldtype": "Check",
+   "label": "Ver Todas las Conversaciones",
+   "default": 0
+  },
+  {
+   "fieldname": "assigned_at",
+   "fieldtype": "Datetime",
+   "label": "Asignado el",
+   "default": "Now",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "modified": "2025-10-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "WhatsApp Session User",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
+
