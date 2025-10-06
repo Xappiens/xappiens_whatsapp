@@ -14,7 +14,7 @@ from typing import Dict, Any, List
 
 
 @frappe.whitelist()
-def sync_session_data(session_name: str, sync_contacts_flag: bool = True, sync_conversations_flag: bool = True, sync_messages_flag: bool = False) -> Dict[str, Any]:
+def sync_session_data(session_name: str, sync_contacts_flag: bool = True, sync_conversations_flag: bool = True, sync_messages_flag: bool = True) -> Dict[str, Any]:
     """
     Sincroniza todos los datos de una sesión desde el servidor externo.
 
@@ -22,7 +22,7 @@ def sync_session_data(session_name: str, sync_contacts_flag: bool = True, sync_c
         session_name: Nombre del documento WhatsApp Session
         sync_contacts_flag: Si debe sincronizar contactos
         sync_conversations_flag: Si debe sincronizar conversaciones
-        sync_messages_flag: Si debe sincronizar mensajes (lento, recomendado hacer por conversación)
+        sync_messages_flag: Si debe sincronizar mensajes (habilitado por defecto)
 
     Returns:
         Dict con resultado de la sincronización completa
@@ -98,17 +98,6 @@ def sync_session_data(session_name: str, sync_contacts_flag: bool = True, sync_c
         # 5. Actualizar estadísticas de la sesión
         update_session_stats(session_name)
 
-        # Registrar actividad
-        frappe.get_doc({
-            "doctype": "WhatsApp Activity Log",
-            "session": session.name,
-            "event_type": "full_sync",
-            "status": "Success",
-            "timestamp": frappe.utils.now(),
-            "user": frappe.session.user,
-            "details": f"Sincronización completa: {results['sync_status']}"
-        }).insert(ignore_permissions=True)
-        frappe.db.commit()
 
         frappe.publish_realtime(
             "sync_progress",
@@ -119,8 +108,6 @@ def sync_session_data(session_name: str, sync_contacts_flag: bool = True, sync_c
         return results
 
     except Exception as e:
-        frappe.log_error(f"Error en sincronización completa: {str(e)}")
-
         results["success"] = False
         results["error"] = str(e)
 
@@ -159,12 +146,12 @@ def auto_sync_all_sessions():
         try:
             frappe.set_user("Administrator")  # Ejecutar como administrador en jobs
 
-            # Sincronizar solo contactos y conversaciones (no mensajes para ser más rápido)
+            # Sincronizar contactos, conversaciones y mensajes
             sync_result = sync_session_data(
                 session_name,
                 sync_contacts_flag=True,
                 sync_conversations_flag=True,
-                sync_messages_flag=False
+                sync_messages_flag=True
             )
 
             if sync_result.get("success"):
@@ -182,13 +169,9 @@ def auto_sync_all_sessions():
                 "session": session_name,
                 "error": str(e)
             })
-            frappe.log_error(f"Error en auto-sync de sesión {session_name}: {str(e)}")
+            # Continuar con la siguiente sesión
 
-    # Registrar resultado de auto-sync
-    frappe.log_error(
-        f"Auto-sync completado: {results['synced']} exitosos, {results['failed']} fallidos",
-        "WhatsApp Auto Sync"
-    )
+    # Auto-sync completado
 
     return results
 

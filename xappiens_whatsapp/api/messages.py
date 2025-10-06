@@ -23,15 +23,19 @@ def sync_messages(conversation_name: str, limit: int = 50) -> Dict[str, Any]:
     Returns:
         Dict con resultado de la sincronización
     """
-    conversation = frappe.get_doc("WhatsApp Conversation", conversation_name)
-    session = frappe.get_doc("WhatsApp Session", conversation.session)
-
-    if not session.is_connected:
-        frappe.throw("La sesión debe estar conectada para sincronizar mensajes")
-
-    client = WhatsAppAPIClient(session.session_id)
-
     try:
+        conversation = frappe.get_doc("WhatsApp Conversation", conversation_name)
+        session = frappe.get_doc("WhatsApp Session", conversation.session)
+
+        frappe.log_error(f"Syncing messages for conversation: {conversation_name}")
+        frappe.log_error(f"Conversation chat_id: {conversation.chat_id}")
+        frappe.log_error(f"Session: {session.name}, connected: {session.is_connected}")
+
+        if not session.is_connected:
+            frappe.throw("La sesión debe estar conectada para sincronizar mensajes")
+
+        client = WhatsAppAPIClient(session.session_id)
+
         # Obtener mensajes del servidor
         response = client.post(
             "/chat/fetchMessages/{sessionId}",
@@ -75,13 +79,12 @@ def sync_messages(conversation_name: str, limit: int = 50) -> Dict[str, Any]:
 
             except Exception as e:
                 errors += 1
-                frappe.log_error(f"Error al sincronizar mensaje {message_id}: {str(e)}")
+                # Continuar sin fallar por errores individuales
 
         frappe.db.commit()
 
         # Actualizar última sincronización de la conversación
-        conversation.last_sync = frappe.utils.now()
-        conversation.save(ignore_permissions=True)
+        frappe.db.set_value("WhatsApp Conversation", conversation_name, "modified", frappe.utils.now())
         frappe.db.commit()
 
         return {
@@ -93,88 +96,8 @@ def sync_messages(conversation_name: str, limit: int = 50) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        frappe.log_error(f"Error en sincronización de mensajes: {str(e)}")
+        frappe.log_error(f"Error syncing messages: {str(e)}")
         frappe.throw(f"Error al sincronizar mensajes: {str(e)}")
-
-
-@frappe.whitelist()
-def send_message(
-    session_name: str,
-    chat_id: str,
-    content: str,
-    content_type: str = "string",
-    options: Dict = None
-) -> Dict[str, Any]:
-    """
-    Envía un mensaje a través del servidor de WhatsApp.
-
-    Args:
-        session_name: Nombre del documento WhatsApp Session
-        chat_id: ID del chat destinatario
-        content: Contenido del mensaje
-        content_type: Tipo de contenido (string, MessageMedia, Location, etc.)
-        options: Opciones adicionales
-
-    Returns:
-        Dict con resultado del envío
-    """
-    session = frappe.get_doc("WhatsApp Session", session_name)
-
-    if not session.is_connected:
-        frappe.throw("La sesión debe estar conectada para enviar mensajes")
-
-    client = WhatsAppAPIClient(session.session_id)
-
-    try:
-        # Enviar mensaje al servidor
-        response = client.post(
-            "/client/sendMessage/{sessionId}",
-            data={
-                "chatId": chat_id,
-                "contentType": content_type,
-                "content": content,
-                "options": options or {}
-            }
-        )
-
-        if response.get("success"):
-            message_data = response.get("message", {})
-
-            # Buscar o crear la conversación
-            conversation = frappe.db.exists("WhatsApp Conversation", {
-                "session": session.name,
-                "chat_id": chat_id
-            })
-
-            if not conversation:
-                # Crear conversación si no existe
-                conversation_doc = frappe.get_doc({
-                    "doctype": "WhatsApp Conversation",
-                    "session": session.name,
-                    "chat_id": chat_id,
-                    "conversation_name": chat_id,
-                    "is_group": "@g.us" in chat_id,
-                    "status": "Active"
-                })
-                conversation_doc.insert(ignore_permissions=True)
-                conversation = conversation_doc.name
-
-            # Guardar mensaje en Frappe
-            message = _create_message_from_data(message_data, conversation, session)
-
-            frappe.db.commit()
-
-            return {
-                "success": True,
-                "message_id": message.name,
-                "message": "Mensaje enviado exitosamente"
-            }
-        else:
-            frappe.throw("Error al enviar mensaje")
-
-    except Exception as e:
-        frappe.log_error(f"Error al enviar mensaje: {str(e)}")
-        frappe.throw(f"Error al enviar mensaje: {str(e)}")
 
 
 @frappe.whitelist()
@@ -214,7 +137,6 @@ def get_chat_messages(conversation_name: str, limit: int = 50, offset: int = 0) 
             frappe.throw("Error al obtener mensajes")
 
     except Exception as e:
-        frappe.log_error(f"Error al obtener mensajes: {str(e)}")
         return {
             "success": False,
             "message": str(e)
@@ -256,18 +178,18 @@ def _create_message_from_data(message_data: Dict, conversation: str, session: An
     # Determinar tipo de mensaje
     message_type = message_data.get("type", "chat")
     type_map = {
-        "chat": "Text",
-        "image": "Image",
-        "video": "Video",
-        "audio": "Audio",
-        "ptt": "Voice",
-        "document": "Document",
-        "location": "Location",
-        "vcard": "Contact",
-        "multi_vcard": "Contact",
-        "sticker": "Sticker"
+        "chat": "text",
+        "image": "image",
+        "video": "video",
+        "audio": "audio",
+        "ptt": "voice",
+        "document": "document",
+        "location": "location",
+        "vcard": "contact",
+        "multi_vcard": "contact",
+        "sticker": "sticker"
     }
-    frappe_type = type_map.get(message_type, "Text")
+    frappe_type = type_map.get(message_type, "text")
 
     # Determinar estado
     ack = message_data.get("ack")
@@ -330,4 +252,346 @@ def _update_message_from_data(message: Any, message_data: Dict):
 
     message.is_starred = message_data.get("isStarred", message.is_starred)
     message.save(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def send_message(conversation_id: str, content: str, message_type: str = "text") -> Dict[str, Any]:
+    """
+    Envía un mensaje a una conversación y lo guarda en el DocType.
+
+    Args:
+        conversation_id: ID de la conversación
+        content: Contenido del mensaje
+        message_type: Tipo de mensaje (text, image, etc.)
+
+    Returns:
+        Dict con resultado del envío
+    """
+    try:
+        # Obtener conversación
+        conversation = frappe.get_doc("WhatsApp Conversation", conversation_id)
+        session = frappe.get_doc("WhatsApp Session", conversation.session)
+
+        if not session.is_connected:
+            return {
+                "success": False,
+                "message": "La sesión no está conectada"
+            }
+
+        # Preparar datos para envío
+        chat_id = conversation.chat_id
+        client = WhatsAppAPIClient(session.session_id)
+
+        # Enviar mensaje al servidor externo
+        response = client.post(
+            f"/client/sendMessage/{session.session_id}",
+            data={
+                "chatId": chat_id,
+                "contentType": "string",
+                "content": content
+            }
+        )
+
+        if not response.get("success"):
+            return {
+                "success": False,
+                "message": f"Error al enviar mensaje: {response.get('message', 'Error desconocido')}"
+            }
+
+        # Guardar mensaje en DocType
+        message_data = response.get("message", {})
+        message_id = message_data.get("id", {}).get("_serialized", "")
+
+        # Crear documento WhatsApp Message
+        message_doc = frappe.get_doc({
+            "doctype": "WhatsApp Message",
+            "session": session.name,
+            "conversation": conversation_id,
+            "contact": conversation.contact,
+            "message_id": message_id,
+            "content": content,
+            "direction": "Outgoing",
+            "message_type": message_type,
+            "status": "sent",
+            "timestamp": frappe.utils.now_datetime(),
+            "from_number": session.phone_number,
+            "to_number": conversation.phone_number,
+            "from_me": True,
+            "has_media": False,
+            "is_forwarded": False,
+            "is_starred": False,
+            "is_status": False
+        })
+
+        message_doc.insert(ignore_permissions=True)
+
+        # Actualizar estadísticas de la sesión
+        frappe.db.set_value("WhatsApp Session", session.name, "total_messages_sent",
+                           (session.total_messages_sent or 0) + 1)
+
+        # Actualizar última actividad de la conversación
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "last_message", content)
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "last_message_time", frappe.utils.now_datetime())
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "last_message_from_me", True)
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "total_messages",
+                           (conversation.total_messages or 0) + 1)
+
+        frappe.db.commit()
+
+        return {
+            "success": True,
+            "message": "Mensaje enviado correctamente",
+            "message_id": message_id,
+            "whatsapp_message": message_doc.name
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error sending message: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error al enviar mensaje: {str(e)}"
+        }
+
+
+@frappe.whitelist()
+def get_profile_pic(contact_id: str, session_id: str = None) -> Dict[str, Any]:
+    """
+    Obtiene la foto de perfil de un contacto y la actualiza en el DocType.
+
+    Args:
+        contact_id: ID del contacto
+        session_id: ID de la sesión (opcional, se detecta automáticamente)
+
+    Returns:
+        Dict con URL de la foto de perfil
+    """
+    try:
+        # Si no se proporciona session_id, buscar sesión activa
+        if not session_id:
+            sessions = frappe.get_all("WhatsApp Session",
+                                    filters={"is_active": 1, "is_connected": 1},
+                                    fields=["name", "session_id"],
+                                    limit=1)
+            if not sessions:
+                return {
+                    "success": False,
+                    "message": "No hay sesión activa"
+                }
+            session_id = sessions[0].session_id
+
+        # Obtener sesión
+        session = frappe.get_doc("WhatsApp Session", {"session_id": session_id})
+
+        if not session.is_connected:
+            return {
+                "success": False,
+                "message": "La sesión no está conectada"
+            }
+
+        # Llamar al servidor externo
+        client = WhatsAppAPIClient(session_id)
+        response = client.post(
+            f"/client/getProfilePicUrl/{session_id}",
+            data={"contactId": contact_id}
+        )
+
+        if not response.get("success"):
+            return {
+                "success": False,
+                "message": f"Error al obtener foto de perfil: {response.get('message', 'Error desconocido')}"
+            }
+
+        profile_pic_url = response.get("result")
+
+        # Actualizar contacto en DocType si existe
+        contacts = frappe.get_all("WhatsApp Contact",
+                                 filters={"contact_id": contact_id, "session": session.name},
+                                 fields=["name"],
+                                 limit=1)
+
+        if contacts:
+            frappe.db.set_value("WhatsApp Contact", contacts[0].name, "profile_pic_url", profile_pic_url)
+            frappe.db.set_value("WhatsApp Contact", contacts[0].name, "last_profile_pic_update", frappe.utils.now())
+            frappe.db.commit()
+
+        return {
+            "success": True,
+            "profile_pic_url": profile_pic_url,
+            "contact_id": contact_id
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error getting profile pic: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error al obtener foto de perfil: {str(e)}"
+        }
+
+
+@frappe.whitelist()
+def mark_as_read(conversation_id: str, session_id: str = None) -> Dict[str, Any]:
+    """
+    Marca una conversación como leída y actualiza el DocType.
+
+    Args:
+        conversation_id: ID de la conversación
+        session_id: ID de la sesión (opcional, se detecta automáticamente)
+
+    Returns:
+        Dict con resultado de la operación
+    """
+    try:
+        # Obtener conversación
+        conversation = frappe.get_doc("WhatsApp Conversation", conversation_id)
+
+        # Si no se proporciona session_id, usar el de la conversación
+        if not session_id:
+            session_id = conversation.session
+
+        session = frappe.get_doc("WhatsApp Session", session_id)
+
+        if not session.is_connected:
+            return {
+                "success": False,
+                "message": "La sesión no está conectada"
+            }
+
+        # Llamar al servidor externo para marcar como leído
+        client = WhatsAppAPIClient(session.session_id)
+        response = client.post(
+            f"/chat/markAsRead/{session.session_id}",
+            data={"chatId": conversation.chat_id}
+        )
+
+        if not response.get("success"):
+            return {
+                "success": False,
+                "message": f"Error al marcar como leído: {response.get('message', 'Error desconocido')}"
+            }
+
+        # Actualizar DocType de conversación
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "unread_count", 0)
+        frappe.db.commit()
+
+        # Actualizar mensajes no leídos en DocType
+        messages = frappe.get_all("WhatsApp Message",
+                                filters={"conversation": conversation_id, "status": "delivered"},
+                                fields=["name"])
+
+        for msg in messages:
+            frappe.db.set_value("WhatsApp Message", msg.name, "status", "read")
+            frappe.db.set_value("WhatsApp Message", msg.name, "read_at", frappe.utils.now())
+
+        frappe.db.commit()
+
+        return {
+            "success": True,
+            "message": "Conversación marcada como leída",
+            "conversation_id": conversation_id,
+            "unread_count": 0
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error marking as read: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error al marcar como leído: {str(e)}"
+        }
+
+
+@frappe.whitelist()
+def get_messages(conversation_id: str, limit: int = 50, offset: int = 0) -> Dict[str, Any]:
+    """
+    Obtiene mensajes de una conversación desde el DocType.
+
+    Args:
+        conversation_id: ID de la conversación
+        limit: Límite de mensajes
+        offset: Offset para paginación
+
+    Returns:
+        Dict con lista de mensajes
+    """
+    try:
+        # Verificar que la conversación existe
+        if not frappe.db.exists("WhatsApp Conversation", conversation_id):
+            return {
+                "success": False,
+                "message": "Conversación no encontrada",
+                "messages": [],
+                "total": 0
+            }
+
+        conversation = frappe.get_doc("WhatsApp Conversation", conversation_id)
+
+        # Obtener mensajes desde DocType WhatsApp Message
+        messages = frappe.get_all("WhatsApp Message",
+            filters={"conversation": conversation_id},
+            fields=["name", "message_id", "content", "message_type", "direction",
+                   "timestamp", "from_me", "status", "has_media",
+                   "quoted_message", "quoted_message_content", "creation"],
+            order_by="timestamp asc",
+            limit=limit,
+            start=offset
+        )
+
+        # Enriquecer mensajes con información adicional
+        enriched_messages = []
+        for msg in messages:
+            # Normalizar direction para el frontend
+            direction = msg.direction.lower() if msg.direction else 'incoming'
+
+            # Usar timestamp directamente (ya está en zona horaria correcta)
+            timestamp = msg.timestamp
+            time_ago = None
+
+            if timestamp:
+                try:
+                    # Calcular time_ago usando el timestamp original
+                    time_ago = frappe.utils.pretty_date(timestamp)
+
+                    # Convertir a string para serialización
+                    timestamp = timestamp.isoformat() if hasattr(timestamp, 'isoformat') else str(timestamp)
+                except Exception as e:
+                    # Si hay error, mantener el timestamp original
+                    timestamp = msg.timestamp
+                    if timestamp:
+                        try:
+                            time_ago = frappe.utils.pretty_date(timestamp)
+                        except:
+                            time_ago = None
+
+            enriched_msg = {
+                "name": msg.name,
+                "message_id": msg.message_id,
+                "content": msg.content,
+                "message_type": msg.message_type,
+                "direction": direction,
+                "timestamp": timestamp,
+                "from_me": msg.from_me,
+                "status": msg.status,
+                "has_media": msg.has_media,
+                "quoted_message": msg.quoted_message,
+                "quoted_message_content": msg.quoted_message_content,
+                "creation": msg.creation,
+                "time_ago": time_ago
+            }
+            enriched_messages.append(enriched_msg)
+
+        return {
+            "success": True,
+            "messages": enriched_messages,
+            "total": len(enriched_messages),
+            "conversation_name": conversation.contact_name,
+            "conversation_phone": conversation.phone_number
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error getting messages: {str(e)}")
+        return {
+            "success": False,
+            "message": str(e),
+            "messages": [],
+            "total": 0
+        }
 

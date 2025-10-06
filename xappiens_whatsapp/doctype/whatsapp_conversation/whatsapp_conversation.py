@@ -57,7 +57,7 @@ class WhatsAppConversation(Document):
 		"""Auto-link to Lead if phone number matches."""
 		try:
 			lead = frappe.db.get_value(
-				"Lead",
+				"CRM Lead",
 				{"mobile_no": self.phone_number},
 				["name", "lead_name"],
 				as_dict=True

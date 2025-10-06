@@ -53,7 +53,7 @@ def start_session(session_name: str) -> Dict[str, Any]:
         # Registrar error en Activity Log
         _log_activity(
             session=session.name,
-            event_type="session_start_failed",
+            event_type="Session",
             status="Failed",
             error_message=str(e)
         )
@@ -65,84 +65,6 @@ def start_session(session_name: str) -> Dict[str, Any]:
 
         frappe.throw(f"Error al iniciar sesión: {str(e)}")
 
-
-@frappe.whitelist()
-def get_session_status(session_name: str) -> Dict[str, Any]:
-    """
-    Obtiene el estado actual de una sesión desde el servidor.
-
-    Args:
-        session_name: Nombre del documento WhatsApp Session
-
-    Returns:
-        Dict con estado de la sesión
-    """
-    session = frappe.get_doc("WhatsApp Session", session_name)
-    client = WhatsAppAPIClient(session.session_id)
-
-    try:
-        # Obtener estado desde el servidor
-        response = client.get("/session/status/{sessionId}")
-
-        if response.get("success"):
-            state = response.get("state", "DISCONNECTED")
-
-            # Mapear estado del servidor a estado de Frappe
-            status_map = {
-                "CONNECTED": "Connected",
-                "CONNECTING": "Connecting",
-                "DISCONNECTED": "Disconnected",
-                "CONFLICT": "Conflict",
-                "TIMEOUT": "Timeout"
-            }
-
-            frappe_status = status_map.get(state, "Disconnected")
-            is_connected = state == "CONNECTED"
-
-            # Actualizar en Frappe
-            session.status = frappe_status
-            session.is_connected = 1 if is_connected else 0
-            session.last_activity = frappe.utils.now()
-
-            # Si está conectado, obtener el número de teléfono
-            if is_connected and not session.phone_number:
-                try:
-                    phone_response = client.get("/session/phone/{sessionId}")
-                    if phone_response.get("success"):
-                        session.phone_number = phone_response.get("phoneNumber")
-                except:
-                    pass
-
-            session.save(ignore_permissions=True)
-            frappe.db.commit()
-
-            return {
-                "success": True,
-                "status": frappe_status,
-                "is_connected": is_connected,
-                "state": state,
-                "phone_number": session.phone_number
-            }
-        else:
-            return {
-                "success": False,
-                "message": response.get("message", "Error al obtener estado")
-            }
-
-    except Exception as e:
-        _log_activity(
-            session=session.name,
-            event_type="status_check_failed",
-            status="Failed",
-            error_message=str(e)
-        )
-
-        frappe.log_error(f"Error al obtener estado de sesión {session.session_id}: {str(e)}")
-
-        return {
-            "success": False,
-            "message": str(e)
-        }
 
 
 @frappe.whitelist()
@@ -209,12 +131,12 @@ def get_qr_code(session_name: str, as_image: bool = True) -> Dict[str, Any]:
     except Exception as e:
         _log_activity(
             session=session.name,
-            event_type="qr_generation_failed",
+            event_type="Session",
             status="Failed",
             error_message=str(e)
         )
 
-        frappe.log_error(f"Error al obtener QR para sesión {session.session_id}: {str(e)}")
+        # Error al obtener QR para sesión
         frappe.throw(f"Error al obtener código QR: {str(e)}")
 
 
@@ -245,7 +167,7 @@ def disconnect_session(session_name: str) -> Dict[str, Any]:
 
             _log_activity(
                 session=session.name,
-                event_type="session_disconnected",
+                event_type="Session",
                 status="Success"
             )
 
@@ -259,7 +181,7 @@ def disconnect_session(session_name: str) -> Dict[str, Any]:
     except Exception as e:
         _log_activity(
             session=session.name,
-            event_type="disconnect_failed",
+            event_type="Session",
             status="Failed",
             error_message=str(e)
         )
@@ -292,7 +214,7 @@ def reconnect_session(session_name: str) -> Dict[str, Any]:
 
             _log_activity(
                 session=session.name,
-                event_type="session_reconnect",
+                event_type="Session",
                 status="Success"
             )
 
@@ -306,7 +228,7 @@ def reconnect_session(session_name: str) -> Dict[str, Any]:
     except Exception as e:
         _log_activity(
             session=session.name,
-            event_type="reconnect_failed",
+            event_type="Session",
             status="Failed",
             error_message=str(e)
         )
@@ -360,7 +282,7 @@ def update_session_stats(session_name: str) -> Dict[str, Any]:
             frappe.throw("Error al obtener estadísticas")
 
     except Exception as e:
-        frappe.log_error(f"Error al actualizar estadísticas de sesión {session.session_id}: {str(e)}")
+        # Error al actualizar estadísticas de sesión
         return {
             "success": False,
             "message": str(e)
@@ -382,6 +304,7 @@ def _log_activity(session: str, event_type: str, status: str, error_message: str
             "doctype": "WhatsApp Activity Log",
             "session": session,
             "event_type": event_type,
+            "action": event_type,
             "status": status,
             "timestamp": frappe.utils.now(),
             "error_message": error_message,
@@ -390,5 +313,66 @@ def _log_activity(session: str, event_type: str, status: str, error_message: str
         activity_log.insert(ignore_permissions=True)
         frappe.db.commit()
     except Exception as e:
-        frappe.log_error(f"Error al registrar actividad: {str(e)}")
+        # Error al registrar actividad
+        pass
+
+
+@frappe.whitelist()
+def get_session_status() -> Dict[str, Any]:
+    """
+    Obtiene el estado de la sesión de WhatsApp desde el DocType.
+
+    Returns:
+        Dict con estado de la sesión
+    """
+    try:
+        # Buscar sesión activa
+        sessions = frappe.get_all("WhatsApp Session",
+                                filters={"is_active": 1, "is_connected": 1},
+                                fields=["name", "session_id", "session_name", "status", "is_connected",
+                                       "phone_number", "total_contacts", "total_chats",
+                                       "total_messages_sent", "total_messages_received"],
+                                limit=1)
+
+        if not sessions:
+            return {
+                "success": False,
+                "message": "No hay sesión activa",
+                "session_status": "DISCONNECTED",
+                "is_connected": False
+            }
+
+        session = sessions[0]
+
+        # Mapear el status del DocType al formato esperado por el frontend
+        status_mapping = {
+            "Connected": "CONNECTED",
+            "Connecting": "CONNECTING",
+            "Disconnected": "DISCONNECTED",
+            "QR Code Required": "QR_CODE_REQUIRED",
+            "Error": "ERROR"
+        }
+
+        mapped_status = status_mapping.get(session.status, "DISCONNECTED")
+
+        return {
+            "success": True,
+            "session_status": mapped_status,
+            "is_connected": bool(session.is_connected),
+            "session_name": session.session_name,
+            "phone_number": session.phone_number,
+            "total_contacts": session.total_contacts or 0,
+            "total_chats": session.total_chats or 0,
+            "total_messages_sent": session.total_messages_sent or 0,
+            "total_messages_received": session.total_messages_received or 0
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error getting session status: {str(e)}")
+        return {
+            "success": False,
+            "message": str(e),
+            "session_status": "ERROR",
+            "is_connected": False
+        }
 

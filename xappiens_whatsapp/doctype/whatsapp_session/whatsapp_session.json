@@ -1,365 +1,294 @@
 {
  "actions": [],
+ "allow_copy": 1,
+ "allow_events_in_timeline": 1,
+ "allow_import": 1,
  "allow_rename": 1,
- "autoname": "field:session_id",
- "creation": "2025-10-03 10:00:00.000000",
+ "app": "xappiens_whatsapp",
+ "color": "#25D366",
+ "creation": "2025-10-04 19:46:08.581108",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "section_break_1",
+  "section_break_basic",
   "session_id",
   "session_name",
-  "phone_number",
-  "column_break_2",
+  "column_break_1",
   "status",
   "is_connected",
   "is_active",
+  "section_break_connection",
+  "phone_number",
+  "column_break_2",
+  "last_seen",
   "section_break_qr",
   "qr_code",
   "qr_image",
-  "column_break_qr",
-  "qr_generated_at",
-  "last_qr_scan",
-  "section_break_connection",
-  "connected_at",
-  "last_activity",
-  "last_seen",
-  "column_break_connection",
-  "connection_count",
-  "disconnection_count",
-  "last_error",
   "section_break_stats",
   "total_contacts",
+  "column_break_3",
   "total_chats",
   "total_messages_sent",
   "total_messages_received",
-  "column_break_stats",
-  "unread_count",
-  "active_conversations",
-  "avg_response_time",
-  "section_break_config",
-  "api_endpoint",
-  "api_key",
-  "column_break_config",
-  "webhook_url",
-  "webhook_secret",
-  "section_break_users",
+  "section_break_error",
+  "error_message",
+  "column_break_4",
+  "error_code",
+  "section_break_assigned",
   "assigned_users",
   "section_break_metadata",
-  "metadata",
-  "notes",
-  "section_break_system",
-  "created_by",
-  "modified_by"
+  "created_at",
+  "column_break_5",
+  "updated_at"
  ],
  "fields": [
   {
-   "fieldname": "section_break_1",
+   "fieldname": "section_break_basic",
    "fieldtype": "Section Break",
-   "label": "Información Básica"
+   "label": "Informaci\u00f3n B\u00e1sica"
   },
   {
+   "description": "Identificador \u00fanico de la sesi\u00f3n",
    "fieldname": "session_id",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "in_standard_filter": 1,
    "label": "Session ID",
    "reqd": 1,
    "unique": 1,
-   "description": "ID único de la sesión (ej: empresa_001)"
+   "width": "150px"
   },
   {
+   "description": "Nombre descriptivo de la sesi\u00f3n",
    "fieldname": "session_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Nombre de Sesión",
+   "label": "Session Name",
    "reqd": 1,
-   "description": "Nombre descriptivo de la sesión"
+   "width": "200px"
   },
   {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Disconnected",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Disconnected\nConnecting\nConnected\nQR Code Required\nError",
+   "reqd": 1,
+   "width": "120px"
+  },
+  {
+   "default": "0",
+   "description": "Indica si la sesi\u00f3n est\u00e1 conectada",
+   "fieldname": "is_connected",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Connected"
+  },
+  {
+   "default": "1",
+   "description": "Indica si la sesi\u00f3n est\u00e1 activa",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "section_break_connection",
+   "fieldtype": "Section Break",
+   "label": "Informaci\u00f3n de Conexi\u00f3n"
+  },
+  {
+   "description": "N\u00famero de tel\u00e9fono conectado",
    "fieldname": "phone_number",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Número de Teléfono",
-   "description": "Número de WhatsApp conectado"
+   "label": "Phone Number",
+   "width": "150px"
   },
   {
    "fieldname": "column_break_2",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Estado",
-   "options": "Connected\nDisconnected\nConnecting\nQR Pending\nError\nInactive",
-   "default": "Disconnected",
-   "reqd": 1
-  },
-  {
-   "fieldname": "is_connected",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Está Conectada",
-   "default": 0
-  },
-  {
-   "fieldname": "is_active",
-   "fieldtype": "Check",
-   "label": "Activa",
-   "default": 1,
-   "description": "Si está activa para uso"
+   "description": "\u00daltima vez que se vio la sesi\u00f3n",
+   "fieldname": "last_seen",
+   "fieldtype": "Datetime",
+   "label": "Last Seen",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_qr",
    "fieldtype": "Section Break",
-   "label": "Código QR"
+   "label": "C\u00f3digo QR"
   },
   {
+   "description": "C\u00f3digo QR para autenticaci\u00f3n",
    "fieldname": "qr_code",
-   "fieldtype": "Long Text",
-   "label": "QR Code (Text)",
-   "description": "Código QR en formato texto"
+   "fieldtype": "Text",
+   "label": "QR Code",
+   "read_only": 1
   },
   {
+   "description": "Imagen del c\u00f3digo QR",
    "fieldname": "qr_image",
-   "fieldtype": "Attach Image",
+   "fieldtype": "Text",
    "label": "QR Image",
-   "description": "Imagen del código QR"
-  },
-  {
-   "fieldname": "column_break_qr",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "qr_generated_at",
-   "fieldtype": "Datetime",
-   "label": "QR Generado el",
-   "description": "Última generación de QR"
-  },
-  {
-   "fieldname": "last_qr_scan",
-   "fieldtype": "Datetime",
-   "label": "Último Escaneo QR",
-   "description": "Última vez que se escaneó el QR"
-  },
-  {
-   "fieldname": "section_break_connection",
-   "fieldtype": "Section Break",
-   "label": "Información de Conexión"
-  },
-  {
-   "fieldname": "connected_at",
-   "fieldtype": "Datetime",
-   "label": "Conectada el",
-   "description": "Fecha y hora de conexión"
-  },
-  {
-   "fieldname": "last_activity",
-   "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "Última Actividad",
-   "description": "Última actividad registrada"
-  },
-  {
-   "fieldname": "last_seen",
-   "fieldtype": "Datetime",
-   "label": "Visto por Última Vez",
-   "description": "Última vez que la sesión fue vista activa"
-  },
-  {
-   "fieldname": "column_break_connection",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "connection_count",
-   "fieldtype": "Int",
-   "label": "Conteo de Conexiones",
-   "default": 0,
    "read_only": 1
-  },
-  {
-   "fieldname": "disconnection_count",
-   "fieldtype": "Int",
-   "label": "Conteo de Desconexiones",
-   "default": 0,
-   "read_only": 1
-  },
-  {
-   "fieldname": "last_error",
-   "fieldtype": "Long Text",
-   "label": "Último Error",
-   "description": "Último error registrado"
   },
   {
    "fieldname": "section_break_stats",
    "fieldtype": "Section Break",
-   "label": "Estadísticas"
+   "label": "Estad\u00edsticas"
   },
   {
+   "default": "0",
+   "description": "Total de contactos sincronizados",
    "fieldname": "total_contacts",
    "fieldtype": "Int",
-   "label": "Total Contactos",
-   "default": 0,
+   "in_list_view": 1,
+   "label": "Total Contacts",
    "read_only": 1
   },
   {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Total de conversaciones",
    "fieldname": "total_chats",
    "fieldtype": "Int",
+   "in_list_view": 1,
    "label": "Total Chats",
-   "default": 0,
    "read_only": 1
   },
   {
+   "default": "0",
+   "description": "Total de mensajes enviados",
    "fieldname": "total_messages_sent",
    "fieldtype": "Int",
-   "label": "Mensajes Enviados",
-   "default": 0,
+   "label": "Messages Sent",
    "read_only": 1
   },
   {
+   "default": "0",
+   "description": "Total de mensajes recibidos",
    "fieldname": "total_messages_received",
    "fieldtype": "Int",
-   "label": "Mensajes Recibidos",
-   "default": 0,
+   "label": "Messages Received",
    "read_only": 1
   },
   {
-   "fieldname": "column_break_stats",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "unread_count",
-   "fieldtype": "Int",
-   "label": "No Leídos",
-   "default": 0,
-   "read_only": 1
-  },
-  {
-   "fieldname": "active_conversations",
-   "fieldtype": "Int",
-   "label": "Conversaciones Activas",
-   "default": 0,
-   "read_only": 1
-  },
-  {
-   "fieldname": "avg_response_time",
-   "fieldtype": "Float",
-   "label": "Tiempo Promedio de Respuesta (min)",
-   "precision": 2,
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_config",
+   "fieldname": "section_break_error",
    "fieldtype": "Section Break",
-   "label": "Configuración API"
+   "label": "Informaci\u00f3n de Error"
   },
   {
-   "fieldname": "api_endpoint",
-   "fieldtype": "Data",
-   "label": "API Endpoint",
-   "description": "URL del servidor de WhatsApp"
+   "description": "Mensaje de error si hay problemas",
+   "fieldname": "error_message",
+   "fieldtype": "Text",
+   "label": "Error Message",
+   "read_only": 1
   },
   {
-   "fieldname": "api_key",
-   "fieldtype": "Password",
-   "label": "API Key",
-   "description": "Clave de API para autenticación"
-  },
-  {
-   "fieldname": "column_break_config",
+   "fieldname": "column_break_4",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "webhook_url",
+   "description": "C\u00f3digo de error",
+   "fieldname": "error_code",
    "fieldtype": "Data",
-   "label": "Webhook URL",
-   "description": "URL para recibir eventos"
+   "label": "Error Code",
+   "read_only": 1
   },
   {
-   "fieldname": "webhook_secret",
-   "fieldtype": "Password",
-   "label": "Webhook Secret",
-   "description": "Secreto para validar webhooks"
-  },
-  {
-   "fieldname": "section_break_users",
+   "fieldname": "section_break_assigned",
    "fieldtype": "Section Break",
    "label": "Usuarios Asignados"
   },
   {
+   "description": "Usuarios asignados a esta sesi\u00f3n",
    "fieldname": "assigned_users",
    "fieldtype": "Table",
-   "label": "Usuarios",
-   "options": "WhatsApp Session User",
-   "description": "Usuarios con acceso a esta sesión"
+   "label": "Assigned Users",
+   "options": "WhatsApp Session User"
   },
   {
    "fieldname": "section_break_metadata",
    "fieldtype": "Section Break",
-   "label": "Metadata y Notas"
+   "label": "Metadatos"
   },
   {
-   "fieldname": "metadata",
-   "fieldtype": "JSON",
-   "label": "Metadata",
-   "description": "Datos adicionales en formato JSON"
-  },
-  {
-   "fieldname": "notes",
-   "fieldtype": "Text Editor",
-   "label": "Notas",
-   "description": "Notas sobre la sesión"
-  },
-  {
-   "fieldname": "section_break_system",
-   "fieldtype": "Section Break",
-   "label": "Información del Sistema"
-  },
-  {
-   "fieldname": "created_by",
-   "fieldtype": "Link",
-   "label": "Creado Por",
-   "options": "User",
+   "description": "Fecha de creaci\u00f3n",
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At",
    "read_only": 1
   },
   {
-   "fieldname": "modified_by",
-   "fieldtype": "Link",
-   "label": "Modificado Por",
-   "options": "User",
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Fecha de \u00faltima actualizaci\u00f3n",
+   "fieldname": "updated_at",
+   "fieldtype": "Datetime",
+   "label": "Updated At",
    "read_only": 1
   }
  ],
+ "icon": "fa fa-whatsapp",
  "index_web_pages_for_search": 1,
- "indexes": [
-  "status",
-  "is_connected",
-  "is_active",
-  "phone_number",
-  "last_activity"
- ],
  "links": [
   {
+   "group": "Datos de WhatsApp",
    "link_doctype": "WhatsApp Contact",
    "link_fieldname": "session"
   },
   {
+   "group": "Datos de WhatsApp",
    "link_doctype": "WhatsApp Conversation",
    "link_fieldname": "session"
   },
   {
+   "group": "Datos de WhatsApp",
    "link_doctype": "WhatsApp Message",
    "link_fieldname": "session"
-  }
- ],
- "modified": "2025-10-03 10:00:00.000000",
+  },
+  {
+   "group": "Datos de WhatsApp",
+   "link_doctype": "WhatsApp Group",
+   "link_fieldname": "session"
+  },
+  {
+   "group": "Analytics y Logs",
+   "link_doctype": "WhatsApp Analytics",
+   "link_fieldname": "session"
+  },
+  {
+   "group": "Analytics y Logs",
+   "link_doctype": "WhatsApp Activity Log",
+   "link_fieldname": "session"
+  },
+ {
+  "group": "Analytics y Logs",
+  "link_doctype": "WhatsApp Webhook Log",
+  "link_fieldname": "session"
+ },
+ {
+  "group": "Datos de WhatsApp",
+  "link_doctype": "WhatsApp Media File",
+  "link_fieldname": "session"
+ }
+],
+"modified": "2025-10-04 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Xappiens Whatsapp",
  "name": "WhatsApp Session",
- "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -367,34 +296,16 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
    "share": 1,
    "write": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "WhatsApp Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "WhatsApp User",
-   "share": 1
   }
  ],
+ "show_name_in_global_search": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
@@ -403,4 +314,3 @@
  "track_seen": 1,
  "track_views": 1
 }
-

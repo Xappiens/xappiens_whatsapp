@@ -3,165 +3,200 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now, get_datetime
+from xappiens_whatsapp.api import session, contacts, conversations, messages, sync
 
 
 class WhatsAppSession(Document):
-	def before_insert(self):
-		"""Set created_by before insert."""
-		if not self.created_by:
-			self.created_by = frappe.session.user
-
-	def before_save(self):
-		"""Update modified_by before save."""
-		self.modified_by = frappe.session.user
-
-		# Update last_activity when status changes
-		if self.has_value_changed("status") or self.has_value_changed("is_connected"):
-			self.last_activity = now()
-
-	def validate(self):
-		"""Validate session data."""
-		# Validate session_id format
-		if not self.session_id:
-			frappe.throw("Session ID is required")
-
-		# Update connection count when connected
-		if self.has_value_changed("is_connected"):
-			if self.is_connected:
-				self.connection_count = (self.connection_count or 0) + 1
-				self.connected_at = now()
-				self.status = "Connected"
-			else:
-				self.disconnection_count = (self.disconnection_count or 0) + 1
-				if self.status == "Connected":
-					self.status = "Disconnected"
-
-	def on_update(self):
-		"""Actions after update."""
-		# Clear QR code if connected
-		if self.is_connected and self.qr_code:
-			frappe.db.set_value("WhatsApp Session", self.name, "qr_code", None, update_modified=False)
-
-	def update_statistics(self):
-		"""Update session statistics from related documents."""
-		# Count contacts
-		self.total_contacts = frappe.db.count("WhatsApp Contact", {"session": self.name})
-
-		# Count conversations
-		self.total_chats = frappe.db.count("WhatsApp Conversation", {"session": self.name})
-
-		# Count messages
-		sent_count = frappe.db.count("WhatsApp Message", {
-			"session": self.name,
-			"direction": "Outgoing"
-		})
-		received_count = frappe.db.count("WhatsApp Message", {
-			"session": self.name,
-			"direction": "Incoming"
-		})
-
-		self.total_messages_sent = sent_count
-		self.total_messages_received = received_count
-
-		# Count unread
-		self.unread_count = frappe.db.sql("""
-			SELECT SUM(unread_count)
-			FROM `tabWhatsApp Conversation`
-			WHERE session = %s AND unread_count > 0
-		""", self.name)[0][0] or 0
-
-		# Count active conversations (with activity in last 24 hours)
-		self.active_conversations = frappe.db.sql("""
-			SELECT COUNT(*)
-			FROM `tabWhatsApp Conversation`
-			WHERE session = %s
-			AND last_message_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-		""", self.name)[0][0] or 0
-
-		self.save()
-
 	@frappe.whitelist()
-	def connect_session(self):
-		"""Conectar sesión de WhatsApp."""
-		try:
-			from xappiens_whatsapp.api.session import start_session
-			result = start_session(self.name)
-			return result
-		except Exception as e:
-			frappe.log_error(f"Error al conectar sesión {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
-
-	@frappe.whitelist()
-	def disconnect_session_btn(self):
-		"""Desconectar sesión de WhatsApp."""
-		try:
-			from xappiens_whatsapp.api.session import disconnect_session
-			result = disconnect_session(self.name)
-			return result
-		except Exception as e:
-			frappe.log_error(f"Error al desconectar sesión {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
-
-	@frappe.whitelist()
-	def get_qr_code_btn(self):
-		"""Obtener código QR para escanear."""
-		try:
-			from xappiens_whatsapp.api.session import get_qr_code
-			result = get_qr_code(self.name, as_image=True)
-			return result
-		except Exception as e:
-			frappe.log_error(f"Error al obtener QR {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
+	def test_method(self):
+		"""Método de prueba"""
+		return {"success": True, "message": "Método de prueba funciona"}
 
 	@frappe.whitelist()
 	def check_status(self):
-		"""Verificar estado de la sesión."""
+		"""Verifica el estado de la sesión de WhatsApp"""
 		try:
-			from xappiens_whatsapp.api.session import get_session_status
-			result = get_session_status(self.name)
+			result = session.get_session_status(self.session_id)
+
+			# Actualizar campos del documento si hay información
+			if result.get("success") and result.get("data"):
+				data = result.get("data", {})
+				if data.get("state"):
+					self.status = self._map_status(data.get("state"))
+				if data.get("phone"):
+					self.phone_number = data.get("phone")
+				self.is_connected = data.get("state") == "CONNECTED"
+				self.save()
+
 			return result
 		except Exception as e:
-			frappe.log_error(f"Error al verificar estado {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
+			frappe.log_error(f"Error checking status: {str(e)}", "WhatsApp Session Check Status")
+			return {"success": False, "error": str(e)}
+
+	@frappe.whitelist()
+	def connect_session(self):
+		"""Conecta la sesión de WhatsApp"""
+		try:
+			result = session.start_session(self.session_id)
+
+			# Actualizar estado
+			if result.get("success"):
+				self.status = "Connecting"
+				self.save()
+
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error connecting session: {str(e)}", "WhatsApp Session Connect")
+			return {"success": False, "error": str(e)}
+
+	@frappe.whitelist()
+	def disconnect_session(self):
+		"""Desconecta la sesión de WhatsApp"""
+		try:
+			result = session.disconnect_session(self.session_id)
+
+			# Actualizar estado
+			if result.get("success"):
+				self.status = "Disconnected"
+				self.is_connected = 0
+				self.save()
+
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error disconnecting session: {str(e)}", "WhatsApp Session Disconnect")
+			return {"success": False, "error": str(e)}
+
+	@frappe.whitelist()
+	def get_qr_code(self):
+		"""Obtiene el código QR de la sesión"""
+		try:
+			result = session.get_qr_code(self.session_id)
+
+			# Actualizar QR code en el documento
+			if result.get("success") and result.get("qr_code"):
+				self.qr_code = result.get("qr_code")
+				self.qr_image = result.get("qr_code_image")
+				self.status = "QR Code Required"
+				self.save()
+
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error getting QR code: {str(e)}", "WhatsApp Session QR Code")
+			return {"success": False, "error": str(e)}
 
 	@frappe.whitelist()
 	def sync_all_data(self):
-		"""Sincronizar todos los datos (contactos, conversaciones, mensajes)."""
+		"""Sincroniza todos los datos de la sesión"""
 		try:
-			from xappiens_whatsapp.api.sync import sync_session_data
-			result = sync_session_data(
-				self.name,
-				sync_contacts_flag=True,
-				sync_conversations_flag=True,
-				sync_messages_flag=False  # Mensajes se sincronizan por conversación
+			result = sync.sync_session_data(self.session_id)
+
+			# Actualizar estadísticas
+			if result.get("success"):
+				self._update_statistics()
+
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error syncing all data: {str(e)}", "WhatsApp Session Sync All")
+			return {"success": False, "error": str(e)}
+
+	@frappe.whitelist()
+	def sync_contacts(self):
+		"""Sincroniza los contactos de la sesión"""
+		try:
+			result = contacts.sync_contacts(self.session_id)
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error syncing contacts: {str(e)}", "WhatsApp Session Sync Contacts")
+			return {"success": False, "error": str(e)}
+
+	@frappe.whitelist()
+	def sync_conversations(self):
+		"""Sincroniza las conversaciones de la sesión"""
+		try:
+			result = conversations.sync_conversations(self.session_id)
+			return result
+		except Exception as e:
+			frappe.log_error(f"Error syncing conversations: {str(e)}", "WhatsApp Session Sync Conversations")
+			return {"success": False, "error": str(e)}
+
+	@frappe.whitelist()
+	def sync_messages(self):
+		"""Sincroniza los mensajes de todas las conversaciones de la sesión"""
+		try:
+			# Obtener todas las conversaciones de la sesión
+			conversations = frappe.get_all(
+				"WhatsApp Conversation",
+				filters={"session": self.name, "status": "Active"},
+				limit=20  # Limitar a las 20 conversaciones más recientes
 			)
-			return result
+
+			if not conversations:
+				return {
+					"success": True,
+					"message": "No hay conversaciones activas para sincronizar",
+					"conversations_synced": 0,
+					"total_messages": 0
+				}
+
+			results = []
+			total_messages = 0
+
+			for conv in conversations:
+				try:
+					msg_result = messages.sync_messages(conv.name, limit=20)
+					results.append(msg_result)
+					if msg_result.get("success"):
+						total_messages += msg_result.get("created", 0) + msg_result.get("updated", 0)
+				except Exception as e:
+					frappe.log_error(f"Error syncing messages for conversation {conv.name}: {str(e)}")
+					continue
+
+			return {
+				"success": True,
+				"conversations_synced": len(results),
+				"total_messages": total_messages,
+				"results": results
+			}
 		except Exception as e:
-			frappe.log_error(f"Error al sincronizar datos {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
+			frappe.log_error(f"Error syncing messages: {str(e)}", "WhatsApp Session Sync Messages")
+			return {"success": False, "error": str(e)}
 
 	@frappe.whitelist()
-	def sync_contacts_btn(self):
-		"""Sincronizar solo contactos."""
+	def sync_groups(self):
+		"""Sincroniza los grupos de la sesión"""
 		try:
-			from xappiens_whatsapp.api.contacts import sync_contacts
-			result = sync_contacts(self.name)
-			self.reload()  # Recargar para mostrar estadísticas actualizadas
-			return result
+			# Por ahora retornar un placeholder ya que no tenemos la función de grupos en el API
+			# TODO: Implementar sync de grupos cuando esté disponible en el API
+			return {
+				"success": True,
+				"message": "Sync de grupos no implementado aún",
+				"data": {}
+			}
 		except Exception as e:
-			frappe.log_error(f"Error al sincronizar contactos {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
+			frappe.log_error(f"Error syncing groups: {str(e)}", "WhatsApp Session Sync Groups")
+			return {"success": False, "error": str(e)}
 
-	@frappe.whitelist()
-	def sync_conversations_btn(self):
-		"""Sincronizar solo conversaciones."""
-		try:
-			from xappiens_whatsapp.api.conversations import sync_conversations
-			result = sync_conversations(self.name)
-			self.reload()  # Recargar para mostrar estadísticas actualizadas
-			return result
-		except Exception as e:
-			frappe.log_error(f"Error al sincronizar conversaciones {self.session_id}: {str(e)}")
-			return {"success": False, "message": str(e)}
+	def _update_statistics(self):
+		"""Actualiza las estadísticas de la sesión"""
+		self.total_contacts = frappe.db.count("WhatsApp Contact", {"session": self.name})
+		self.total_chats = frappe.db.count("WhatsApp Conversation", {"session": self.name})
+		self.total_messages_sent = frappe.db.count("WhatsApp Message", {
+			"session": self.name,
+			"direction": "Outgoing"
+		})
+		self.total_messages_received = frappe.db.count("WhatsApp Message", {
+			"session": self.name,
+			"direction": "Incoming"
+		})
+		self.save()
 
+	def _map_status(self, api_status):
+		"""Mapea el estado de la API al estado del DocType"""
+		status_map = {
+			"CONNECTED": "Connected",
+			"DISCONNECTED": "Disconnected",
+			"CONNECTING": "Connecting",
+			"QR": "QR Code Required",
+			"ERROR": "Error"
+		}
+		return status_map.get(api_status, "Disconnected")

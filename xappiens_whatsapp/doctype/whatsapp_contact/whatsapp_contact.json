@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "field:contact_id",
- "creation": "2025-10-03 10:00:00.000000",
+ "creation": "2025-10-04 17:59:19.423839",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -58,58 +58,58 @@
   {
    "fieldname": "section_break_1",
    "fieldtype": "Section Break",
-   "label": "Información Básica"
+   "label": "Informaci\u00f3n B\u00e1sica"
   },
   {
+   "description": "ID de WhatsApp (ej: 34657032985@c.us)",
    "fieldname": "contact_id",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Contact ID",
    "reqd": 1,
-   "unique": 1,
-   "description": "ID de WhatsApp (ej: 34657032985@c.us)"
+   "unique": 1
   },
   {
    "fieldname": "session",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Sesión",
+   "label": "Sesi\u00f3n",
    "options": "WhatsApp Session",
    "reqd": 1
   },
   {
+   "description": "N\u00famero sin formato (ej: 34657032985)",
    "fieldname": "phone_number",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Número de Teléfono",
-   "reqd": 1,
-   "description": "Número sin formato (ej: 34657032985)"
+   "label": "N\u00famero de Tel\u00e9fono",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_2",
    "fieldtype": "Column Break"
   },
   {
+   "description": "Nombre del contacto en la libreta",
    "fieldname": "contact_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Nombre",
-   "description": "Nombre del contacto en la libreta"
+   "label": "Nombre"
   },
   {
+   "description": "Nombre que el usuario ha configurado en WhatsApp",
    "fieldname": "pushname",
    "fieldtype": "Data",
-   "label": "Pushname",
-   "description": "Nombre que el usuario ha configurado en WhatsApp"
+   "label": "Pushname"
   },
   {
+   "description": "Nombre corto o alias",
    "fieldname": "short_name",
    "fieldtype": "Data",
-   "label": "Nombre Corto",
-   "description": "Nombre corto o alias"
+   "label": "Nombre Corto"
   },
   {
    "fieldname": "section_break_profile",
@@ -117,31 +117,31 @@
    "label": "Perfil"
   },
   {
+   "description": "URL completa de la foto de perfil",
    "fieldname": "profile_pic_url",
-   "fieldtype": "Data",
-   "label": "URL Foto de Perfil",
-   "description": "URL completa de la foto de perfil"
+   "fieldtype": "Text",
+   "label": "URL Foto de Perfil"
   },
   {
+   "description": "Estado o informaci\u00f3n 'Acerca de'",
    "fieldname": "about",
    "fieldtype": "Small Text",
-   "label": "Acerca de",
-   "description": "Estado o información 'Acerca de'"
+   "label": "Acerca de"
   },
   {
    "fieldname": "column_break_profile",
    "fieldtype": "Column Break"
   },
   {
+   "description": "Miniatura de la foto de perfil",
    "fieldname": "profile_pic_thumb",
    "fieldtype": "Attach Image",
-   "label": "Foto de Perfil",
-   "description": "Miniatura de la foto de perfil"
+   "label": "Foto de Perfil"
   },
   {
    "fieldname": "last_profile_pic_update",
    "fieldtype": "Datetime",
-   "label": "Última Actualización de Foto",
+   "label": "\u00daltima Actualizaci\u00f3n de Foto",
    "read_only": 1
   },
   {
@@ -150,78 +150,78 @@
    "label": "Estado del Contacto"
   },
   {
+   "default": "1",
+   "description": "Si es un usuario v\u00e1lido de WhatsApp",
    "fieldname": "is_user",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Es Usuario de WhatsApp",
-   "default": 1,
-   "description": "Si es un usuario válido de WhatsApp"
+   "label": "Es Usuario de WhatsApp"
   },
   {
+   "default": "0",
+   "description": "Si es un grupo de WhatsApp",
    "fieldname": "is_group",
    "fieldtype": "Check",
-   "label": "Es Grupo",
-   "default": 0,
-   "description": "Si es un grupo de WhatsApp"
+   "label": "Es Grupo"
   },
   {
+   "default": "0",
+   "description": "Si est\u00e1 en mi libreta de contactos",
    "fieldname": "is_my_contact",
    "fieldtype": "Check",
    "in_standard_filter": 1,
-   "label": "Es Mi Contacto",
-   "default": 0,
-   "description": "Si está en mi libreta de contactos"
+   "label": "Es Mi Contacto"
   },
   {
    "fieldname": "column_break_status",
    "fieldtype": "Column Break"
   },
   {
+   "default": "1",
+   "description": "Si es un contacto oficial de WhatsApp",
    "fieldname": "is_wa_contact",
    "fieldtype": "Check",
-   "label": "Es Contacto de WhatsApp",
-   "default": 1,
-   "description": "Si es un contacto oficial de WhatsApp"
+   "label": "Es Contacto de WhatsApp"
   },
   {
+   "default": "0",
+   "description": "Si el contacto est\u00e1 bloqueado",
    "fieldname": "is_blocked",
    "fieldtype": "Check",
    "in_standard_filter": 1,
-   "label": "Está Bloqueado",
-   "default": 0,
-   "description": "Si el contacto está bloqueado"
+   "label": "Est\u00e1 Bloqueado"
   },
   {
+   "default": "0",
+   "description": "Si es una cuenta de WhatsApp Business",
    "fieldname": "is_enterprise",
    "fieldtype": "Check",
-   "label": "Es Cuenta Business",
-   "default": 0,
-   "description": "Si es una cuenta de WhatsApp Business"
+   "label": "Es Cuenta Business"
   },
   {
    "fieldname": "section_break_verification",
    "fieldtype": "Section Break",
-   "label": "Verificación"
+   "label": "Verificaci\u00f3n"
   },
   {
+   "default": "0",
+   "description": "Si la cuenta est\u00e1 verificada por WhatsApp",
    "fieldname": "is_verified",
    "fieldtype": "Check",
-   "label": "Está Verificado",
-   "default": 0,
-   "description": "Si la cuenta está verificada por WhatsApp"
+   "label": "Est\u00e1 Verificado"
   },
   {
+   "description": "Nombre oficial verificado",
    "fieldname": "verified_name",
    "fieldtype": "Data",
-   "label": "Nombre Verificado",
-   "description": "Nombre oficial verificado"
+   "label": "Nombre Verificado"
   },
   {
+   "default": "Unverified",
    "fieldname": "verified_level",
    "fieldtype": "Select",
-   "label": "Nivel de Verificación",
-   "options": "\nUnverified\nVerified\nOfficial",
-   "default": "Unverified"
+   "label": "Nivel de Verificaci\u00f3n",
+   "options": "\nUnverified\nVerified\nOfficial"
   },
   {
    "fieldname": "column_break_verification",
@@ -230,19 +230,19 @@
   {
    "fieldname": "verification_date",
    "fieldtype": "Datetime",
-   "label": "Fecha de Verificación",
+   "label": "Fecha de Verificaci\u00f3n",
    "read_only": 1
   },
   {
+   "description": "Informaci\u00f3n del perfil de negocio en JSON",
    "fieldname": "business_profile",
    "fieldtype": "JSON",
-   "label": "Perfil de Negocio",
-   "description": "Información del perfil de negocio en JSON"
+   "label": "Perfil de Negocio"
   },
   {
    "fieldname": "section_break_sync",
    "fieldtype": "Section Break",
-   "label": "Sincronización"
+   "label": "Sincronizaci\u00f3n"
   },
   {
    "fieldname": "first_seen",
@@ -253,14 +253,14 @@
   {
    "fieldname": "last_seen",
    "fieldtype": "Datetime",
-   "label": "Última Vez Visto",
+   "label": "\u00daltima Vez Visto",
    "read_only": 1
   },
   {
    "fieldname": "last_sync",
    "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Última Sincronización",
+   "label": "\u00daltima Sincronizaci\u00f3n",
    "read_only": 1
   },
   {
@@ -268,23 +268,23 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "0",
    "fieldname": "sync_count",
    "fieldtype": "Int",
    "label": "Conteo de Sincronizaciones",
-   "default": 0,
    "read_only": 1
   },
   {
+   "default": "Pending",
    "fieldname": "sync_status",
    "fieldtype": "Select",
-   "label": "Estado de Sincronización",
-   "options": "Pending\nSyncing\nSynced\nError",
-   "default": "Pending"
+   "label": "Estado de Sincronizaci\u00f3n",
+   "options": "Pending\nSyncing\nSynced\nError"
   },
   {
    "fieldname": "sync_error",
    "fieldtype": "Small Text",
-   "label": "Error de Sincronización",
+   "label": "Error de Sincronizaci\u00f3n",
    "read_only": 1
   },
   {
@@ -293,25 +293,25 @@
    "label": "Relaciones con Frappe"
   },
   {
+   "description": "Cliente de Frappe vinculado",
    "fieldname": "linked_customer",
    "fieldtype": "Link",
    "label": "Cliente Vinculado",
-   "options": "Customer",
-   "description": "Cliente de Frappe vinculado"
+   "options": "CRM Organization"
   },
   {
+   "description": "Lead de CRM vinculado",
    "fieldname": "linked_lead",
    "fieldtype": "Link",
    "label": "Lead Vinculado",
-   "options": "Lead",
-   "description": "Lead de CRM vinculado"
+   "options": "CRM Lead"
   },
   {
+   "description": "Contacto de Frappe vinculado",
    "fieldname": "linked_contact",
    "fieldtype": "Link",
    "label": "Contacto Vinculado",
-   "options": "Contact",
-   "description": "Contacto de Frappe vinculado"
+   "options": "Contact"
   },
   {
    "fieldname": "section_break_metadata",
@@ -319,37 +319,31 @@
    "label": "Metadata y Notas"
   },
   {
+   "description": "Etiquetas separadas por comas",
    "fieldname": "labels",
    "fieldtype": "Small Text",
-   "label": "Etiquetas",
-   "description": "Etiquetas separadas por comas"
+   "label": "Etiquetas"
   },
   {
+   "description": "Tags personalizados",
    "fieldname": "tags",
    "fieldtype": "Small Text",
-   "label": "Tags",
-   "description": "Tags personalizados"
+   "label": "Tags"
   },
   {
+   "description": "Campos personalizados en formato JSON",
    "fieldname": "custom_fields",
    "fieldtype": "JSON",
-   "label": "Campos Personalizados",
-   "description": "Campos personalizados en formato JSON"
+   "label": "Campos Personalizados"
   },
   {
+   "description": "Notas sobre el contacto",
    "fieldname": "notes",
    "fieldtype": "Text Editor",
-   "label": "Notas",
-   "description": "Notas sobre el contacto"
+   "label": "Notas"
   }
  ],
  "index_web_pages_for_search": 1,
- "indexes": [
-  "session,phone_number",
-  "session,contact_name",
-  "linked_lead",
-  "linked_customer"
- ],
  "links": [
   {
    "link_doctype": "WhatsApp Conversation",
@@ -360,7 +354,7 @@
    "link_fieldname": "contact"
   }
  ],
- "modified": "2025-10-03 10:00:00.000000",
+ "modified": "2025-10-04 20:03:09.597773",
  "modified_by": "Administrator",
  "module": "Xappiens Whatsapp",
  "name": "WhatsApp Contact",
@@ -409,4 +403,3 @@
  "track_changes": 1,
  "track_seen": 1
 }
-
