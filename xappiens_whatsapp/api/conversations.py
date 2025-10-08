@@ -405,7 +405,14 @@ def get_conversations(session_id: str = None, limit: int = 50, offset: int = 0) 
                                      start=offset)
 
         frappe.log_error(f"Found {len(conversations)} conversations for session {session_id}")
-        frappe.log_error(f"Conversation names: {[c.name for c in conversations]}")
+        # Log conversation names in chunks to avoid character limit
+        conv_names = [c.name for c in conversations]
+        if conv_names:
+            # Log first few names only to stay within character limit
+            sample_names = conv_names[:5]  # Show first 5 names
+            frappe.log_error(f"Sample conversation names: {sample_names}")
+            if len(conv_names) > 5:
+                frappe.log_error(f"Total conversations: {len(conv_names)}")
 
         # Enriquecer con información adicional
         enriched_conversations = []
@@ -499,7 +506,14 @@ def get_conversations(session_id: str = None, limit: int = 50, offset: int = 0) 
             enriched_conversations.append(enriched_conv)
 
         frappe.log_error(f"Returning {len(enriched_conversations)} conversations")
-        frappe.log_error(f"Enriched conversation names: {[c['name'] for c in enriched_conversations]}")
+        # Log enriched conversation names in chunks to avoid character limit
+        enriched_names = [c['name'] for c in enriched_conversations]
+        if enriched_names:
+            # Log first few names only to stay within character limit
+            sample_enriched_names = enriched_names[:5]  # Show first 5 names
+            frappe.log_error(f"Sample enriched conversation names: {sample_enriched_names}")
+            if len(enriched_names) > 5:
+                frappe.log_error(f"Total enriched conversations: {len(enriched_names)}")
 
         return {
             "success": True,
@@ -508,7 +522,11 @@ def get_conversations(session_id: str = None, limit: int = 50, offset: int = 0) 
         }
 
     except Exception as e:
-        frappe.log_error(f"Error getting conversations: {str(e)}")
+        # Truncate error message to avoid character limit issues
+        error_msg = str(e)
+        if len(error_msg) > 100:  # Leave some room for the prefix
+            error_msg = error_msg[:100] + "..."
+        frappe.log_error(f"Error getting conversations: {error_msg}")
         return {
             "success": False,
             "message": str(e),
