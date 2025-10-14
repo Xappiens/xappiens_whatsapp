@@ -4,19 +4,31 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [
-  "section_break_1",
-  "enabled",
-  "default_session",
-  "column_break_2",
-  "auto_sync_enabled",
-  "sync_interval",
-  "section_break_api",
-  "api_base_url",
-  "api_key",
-  "column_break_api",
-  "api_timeout",
-  "api_retry_attempts",
+  "field_order": [
+   "section_break_1",
+   "enabled",
+   "default_session",
+   "column_break_2",
+   "auto_sync_enabled",
+   "sync_interval",
+   "section_break_auth",
+   "api_email",
+   "api_password",
+   "column_break_auth",
+   "api_user_id",
+   "organization_id",
+   "section_break_api",
+   "api_base_url",
+   "api_key",
+   "column_break_api",
+   "api_timeout",
+   "api_retry_attempts",
+  "section_break_session",
+  "session_id",
+  "session_db_id",
+  "column_break_session",
+  "phone_number",
+  "session_status",
   "section_break_webhook",
   "webhook_enabled",
   "webhook_secret",
@@ -94,6 +106,44 @@
    "depends_on": "eval:doc.auto_sync_enabled==1"
   },
   {
+   "fieldname": "section_break_auth",
+   "fieldtype": "Section Break",
+   "label": "Credenciales de Autenticación"
+  },
+  {
+   "fieldname": "api_email",
+   "fieldtype": "Data",
+   "label": "Email de API",
+   "reqd": 1,
+   "default": "apiwhatsapp@grupoatu.com",
+   "description": "Email para autenticación con el servidor de WhatsApp"
+  },
+  {
+   "fieldname": "api_password",
+   "fieldtype": "Data",
+   "label": "Password de API",
+   "reqd": 1,
+   "description": "Password para autenticación con el servidor de WhatsApp"
+  },
+  {
+   "fieldname": "column_break_auth",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_user_id",
+   "fieldtype": "Int",
+   "label": "User ID",
+   "default": 2,
+   "description": "ID del usuario en el servidor de WhatsApp"
+  },
+  {
+   "fieldname": "organization_id",
+   "fieldtype": "Int",
+   "label": "Organization ID",
+   "default": 1,
+   "description": "ID de la organización en el servidor de WhatsApp"
+  },
+  {
    "fieldname": "section_break_api",
    "fieldtype": "Section Break",
    "label": "Configuración de API"
@@ -103,12 +153,14 @@
    "fieldtype": "Data",
    "label": "URL Base de API",
    "reqd": 1,
-   "description": "URL del servidor de WhatsApp (ej: http://localhost:8084)"
+   "default": "https://api.inbox-hub.com",
+   "description": "URL del servidor de WhatsApp (ej: https://api.inbox-hub.com)"
   },
   {
    "fieldname": "api_key",
-   "fieldtype": "Password",
+   "fieldtype": "Data",
    "label": "API Key",
+   "reqd": 1,
    "description": "Clave de API para autenticación"
   },
   {
@@ -126,6 +178,45 @@
    "fieldtype": "Int",
    "label": "Intentos de Reintento",
    "default": 3
+  },
+  {
+   "fieldname": "section_break_session",
+   "fieldtype": "Section Break",
+   "label": "Configuración de Sesión WhatsApp"
+  },
+  {
+   "fieldname": "session_id",
+   "fieldtype": "Data",
+   "label": "Session ID",
+   "reqd": 1,
+   "default": "nueva_sesion_wa",
+   "description": "ID de la sesión de WhatsApp en el servidor"
+  },
+  {
+   "fieldname": "session_db_id",
+   "fieldtype": "Int",
+   "label": "Session DB ID",
+   "default": 2,
+   "description": "ID de la sesión en la base de datos del servidor"
+  },
+  {
+   "fieldname": "column_break_session",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "label": "Número de Teléfono",
+   "default": "34657032985",
+   "description": "Número de teléfono de la sesión de WhatsApp"
+  },
+  {
+   "fieldname": "session_status",
+   "fieldtype": "Select",
+   "label": "Estado de la Sesión",
+   "options": "disconnected\nconnecting\nconnected\nerror",
+   "default": "connected",
+   "description": "Estado actual de la sesión de WhatsApp"
   },
   {
    "fieldname": "section_break_webhook",
@@ -147,6 +238,7 @@
    "fieldname": "webhook_events",
    "fieldtype": "Small Text",
    "label": "Eventos de Webhook",
+   "default": "message,message_ack,presence_update,session_status,contact_update",
    "description": "Eventos separados por comas (ej: message,message_ack,presence_update)"
   },
   {

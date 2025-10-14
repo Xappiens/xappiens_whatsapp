@@ -44,7 +44,7 @@ app_license = "mit"
 
 # include js in doctype views
 doctype_js = {"WhatsApp Session" : "public/js/whatsapp_session.js"}
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {"WhatsApp Session" : "public/js/whatsapp_session.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -90,6 +90,18 @@ after_install = "xappiens_whatsapp.install.after_install"
 
 before_uninstall = "xappiens_whatsapp.install.before_uninstall"
 # after_uninstall = "xappiens_whatsapp.install.after_uninstall"
+
+# Fixtures
+# --------
+
+fixtures = [
+    {
+        "doctype": "WhatsApp Settings",
+        "filters": [
+            ["name", "=", "WhatsApp Settings"]
+        ]
+    }
+]
 
 # Integration Setup
 # ------------------
