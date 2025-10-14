@@ -15,6 +15,7 @@ def after_install():
 	Crea el enlace simbólico necesario para que los módulos funcionen correctamente.
 	"""
 	create_module_symlink()
+	cleanup_duplicate_message_ids()
 	print("\n✅ Xappiens WhatsApp instalado correctamente")
 
 
@@ -76,4 +77,65 @@ def remove_module_symlink():
 
 	except Exception as e:
 		print(f"⚠️ Error al eliminar enlace simbólico: {str(e)}")
+
+
+def cleanup_duplicate_message_ids():
+	"""
+	Limpia message_ids duplicados en WhatsApp Message antes de aplicar restricciones unique.
+	Esto evita errores durante la instalación en sitios con datos existentes.
+	"""
+	try:
+		# Verificar si la tabla existe
+		if not frappe.db.table_exists("WhatsApp Message"):
+			return
+
+		# Obtener todos los message_ids duplicados
+		duplicate_message_ids = frappe.db.sql("""
+			SELECT message_id, COUNT(*) as count
+			FROM `tabWhatsApp Message`
+			WHERE message_id IS NOT NULL AND message_id != ''
+			GROUP BY message_id
+			HAVING COUNT(*) > 1
+			ORDER BY count DESC
+		""", as_dict=True)
+
+		if not duplicate_message_ids:
+			print("✓ No se encontraron message_ids duplicados")
+			return
+
+		print(f"⚠️ Encontrados {len(duplicate_message_ids)} message_ids duplicados")
+
+		# Limpiar duplicados manteniendo solo el más reciente
+		for duplicate in duplicate_message_ids:
+			message_id = duplicate.message_id
+
+			# Obtener todos los registros con este message_id
+			duplicate_records = frappe.db.sql("""
+				SELECT name, creation
+				FROM `tabWhatsApp Message`
+				WHERE message_id = %s
+				ORDER BY creation DESC
+			""", (message_id,), as_dict=True)
+
+			# Mantener solo el más reciente, actualizar el resto
+			if len(duplicate_records) > 1:
+				records_to_update = duplicate_records[1:]  # Todos excepto el primero (más reciente)
+
+				for record in records_to_update:
+					# Actualizar el message_id para que sea único
+					new_message_id = f"{message_id}_duplicate_{record.name}"
+					frappe.db.sql("""
+						UPDATE `tabWhatsApp Message`
+						SET message_id = %s
+						WHERE name = %s
+					""", (new_message_id, record.name))
+
+					print(f"✓ Actualizado message_id duplicado: {message_id} -> {new_message_id}")
+
+		frappe.db.commit()
+		print("✅ Limpieza de message_ids duplicados completada")
+
+	except Exception as e:
+		print(f"⚠️ Error durante la limpieza de message_ids duplicados: {str(e)}")
+		print("⚠️ La aplicación se instalará, pero puede haber problemas con message_ids duplicados")
 

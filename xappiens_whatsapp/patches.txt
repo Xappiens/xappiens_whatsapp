@@ -1,6 +1,7 @@
 [pre_model_sync]
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
+xappiens_whatsapp.patches.v1_0_0.cleanup_duplicate_message_ids.execute
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
