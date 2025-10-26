@@ -9,7 +9,9 @@ import base64
 from io import BytesIO
 from PIL import Image
 import qrcode
+from typing import Optional
 from xappiens_whatsapp.utils.settings import get_api_credentials, get_api_base_url
+from .base import WhatsAppAPIClient
 
 
 
@@ -81,135 +83,153 @@ def test_connection():
         }
 
 
+def _resolve_session_doc(session_ref: Optional[str] = None):
+    """Obtiene el documento de sesión a partir de un nombre o session_id."""
+    session_doc = None
+
+    if session_ref:
+        if frappe.db.exists("WhatsApp Session", session_ref):
+            session_doc = frappe.get_doc("WhatsApp Session", session_ref)
+        else:
+            existing = frappe.db.get_value("WhatsApp Session", {"session_id": session_ref}, "name")
+            if existing:
+                session_doc = frappe.get_doc("WhatsApp Session", existing)
+
+    if not session_doc:
+        default_session = frappe.db.get_single_value("WhatsApp Settings", "default_session")
+        if default_session and frappe.db.exists("WhatsApp Session", default_session):
+            session_doc = frappe.get_doc("WhatsApp Session", default_session)
+
+    if not session_doc:
+        any_session = frappe.db.get_value(
+            "WhatsApp Session",
+            {"is_active": 1},
+            "name"
+        )
+        if any_session:
+            session_doc = frappe.get_doc("WhatsApp Session", any_session)
+
+    return session_doc
+
+
+def _extract_sessions(payload: dict) -> list:
+    """Normaliza la respuesta del servidor para obtener la lista de sesiones."""
+    if not payload:
+        return []
+
+    data = payload.get("data")
+    if isinstance(data, dict):
+        candidates = data.get("items") or data.get("sessions") or data.get("data")
+        if isinstance(candidates, list):
+            return candidates
+    elif isinstance(data, list):
+        return data
+
+    sessions = payload.get("sessions")
+    if isinstance(sessions, list):
+        return sessions
+
+    return []
+
+
 @frappe.whitelist()
-def get_session_status(session_id):
+def get_session_status(session_id: Optional[str] = None):
     """
     Obtener el estado actual de una sesión de WhatsApp
     """
     try:
-        # Obtener credenciales de configuración
-        settings = get_api_credentials()
-        api_base_url = get_api_base_url()
+        session_doc = _resolve_session_doc(session_id)
 
-        if not settings or not api_base_url:
+        if not session_doc:
             return {
                 "success": False,
-                "error": "Configuración de WhatsApp no encontrada"
+                "error": "No hay sesión de WhatsApp configurada"
             }
 
-        # Obtener token JWT fresco
-        login_response = requests.post(
-            f"{api_base_url}/api/auth/login",
-            json={
-                "identifier": settings.get('email'),
-                "password": settings.get('password')
-            },
-            headers={"Content-Type": "application/json"},
-            timeout=30
-        )
+        client = WhatsAppAPIClient()
+        response = client.get_sessions(limit=100)
 
-        if login_response.status_code != 200:
+        if not response.get("success"):
             return {
                 "success": False,
-                "error": "Error de autenticación al obtener estado"
+                "error": response.get("message") or "Error obteniendo sesiones"
             }
 
-        login_data = login_response.json()
-        if not login_data.get('success') or not login_data.get('data', {}).get('accessToken'):
+        sessions = _extract_sessions(response)
+
+        matched_session = None
+        for remote in sessions:
+            if remote.get("sessionId") == session_doc.session_id:
+                matched_session = remote
+                break
+            if session_doc.session_db_id and str(remote.get("id")) == str(session_doc.session_db_id):
+                matched_session = remote
+                break
+
+        if not matched_session:
+            # Considerar la sesión como desconectada si no aparece en el listado
+            session_doc.is_connected = 0
+            session_doc.status = "Disconnected"
+            session_doc.save(ignore_permissions=True)
+            frappe.db.commit()
             return {
-                "success": False,
-                "error": "Token de acceso no obtenido"
-            }
-
-        access_token = login_data['data']['accessToken']
-
-        # Buscar la sesión por session_id en la lista de sesiones
-        sessions_response = requests.get(
-            f"{api_base_url}/api/sessions",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "X-API-Key": settings.get('api_key'),
-                "Content-Type": "application/json"
-            },
-            timeout=30
-        )
-
-        if sessions_response.status_code == 200:
-            sessions_data = sessions_response.json()
-            if sessions_data.get('success'):
-                # Buscar la sesión por sessionId
-                for session in sessions_data.get('data', {}).get('sessions', []):
-                    if session.get('sessionId') == session_id:
-                        # Obtener datos de la sesión
-                        session_status = session.get('status', 'disconnected')
-                        is_connected = 1 if session_status == 'connected' else 0
-                        phone_number = session.get('phoneNumber', '')
-                        last_activity = session.get('lastActivity', '')
-
-                        # Actualizar estado en Frappe
-                        try:
-                            session_doc = frappe.get_doc("WhatsApp Session", {"session_id": session_id})
-                            if session_doc:
-                                # Mapear estado del servidor a estado de Frappe
-                                frappe_status = "Disconnected"
-                                if session_status == 'connected':
-                                    frappe_status = "Connected"
-                                elif session_status == 'connecting':
-                                    frappe_status = "Connecting"
-                                elif session_status == 'qr_code_required':
-                                    frappe_status = "QR Code Required"
-                                elif session_status == 'error':
-                                    frappe_status = "Error"
-
-                                # Actualizar campos
-                                session_doc.status = frappe_status
-                                session_doc.is_connected = is_connected
-                                if phone_number:
-                                    session_doc.phone_number = phone_number
-
-                                # Convertir last_activity a formato MySQL si existe
-                                if last_activity:
-                                    try:
-                                        from datetime import datetime
-                                        # Convertir ISO string a datetime de Python
-                                        dt = datetime.fromisoformat(last_activity.replace('Z', '+00:00'))
-                                        # Formatear para MySQL (YYYY-MM-DD HH:MM:SS)
-                                        session_doc.last_seen = dt.strftime('%Y-%m-%d %H:%M:%S')
-                                    except:
-                                        # Si no se puede convertir, usar solo la fecha
-                                        session_doc.last_seen = last_activity.split('T')[0] if 'T' in last_activity else last_activity
-
-                                session_doc.save(ignore_permissions=True)
-                                frappe.db.commit()
-                        except Exception as e:
-                            print(f"Error actualizando sesión en Frappe: {str(e)[:100]}")
-
-                        return {
-                            "success": True,
-                            "data": {
-                                "id": session.get('id'),
-                                "sessionId": session.get('sessionId'),
-                                "status": session_status,
-                                "is_connected": is_connected,
-                                "phone_number": phone_number,
-                                "last_activity": last_activity
-                            }
-                        }
-
-                return {
-                    "success": False,
-                    "error": "Sesión no encontrada"
+                "success": True,
+                "data": {
+                    "id": session_doc.session_db_id,
+                    "sessionId": session_doc.session_id,
+                    "status": "disconnected",
+                    "is_connected": 0,
+                    "phone_number": session_doc.phone_number,
+                    "last_activity": session_doc.last_seen
                 }
-            else:
-                return {
-                    "success": False,
-                    "error": f"Error obteniendo sesiones: {sessions_data.get('message', 'Error desconocido')}"
-                }
-        else:
-            return {
-                "success": False,
-                "error": f"Error del servidor: {sessions_response.status_code}"
             }
+
+        session_status = (matched_session.get("status") or "disconnected").lower()
+        is_connected = 1 if session_status == "connected" else 0
+        phone_number = matched_session.get("phoneNumber") or matched_session.get("msisdn") or session_doc.phone_number
+        last_activity = matched_session.get("lastActivity") or matched_session.get("lastSeen")
+
+        # Mapear estado al DocType
+        frappe_status = "Disconnected"
+        if session_status == "connected":
+            frappe_status = "Connected"
+        elif session_status == "connecting":
+            frappe_status = "Connecting"
+        elif session_status in ("qr_code", "qr_code_required"):
+            frappe_status = "QR Code Required"
+        elif session_status == "error":
+            frappe_status = "Error"
+
+        session_doc.status = frappe_status
+        session_doc.is_connected = is_connected
+        if phone_number:
+            session_doc.phone_number = phone_number
+
+        if last_activity:
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(str(last_activity).replace('Z', '+00:00'))
+                session_doc.last_seen = dt.strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                session_doc.last_seen = last_activity
+
+        if matched_session.get("id"):
+            session_doc.session_db_id = matched_session.get("id")
+
+        session_doc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        return {
+            "success": True,
+            "data": {
+                "id": matched_session.get("id"),
+                "sessionId": matched_session.get("sessionId"),
+                "status": matched_session.get("status"),
+                "is_connected": is_connected,
+                "phone_number": phone_number,
+                "last_activity": last_activity
+            }
+        }
 
     except Exception as e:
         print(f"Error obteniendo estado de sesión WhatsApp: {str(e)[:100]}")

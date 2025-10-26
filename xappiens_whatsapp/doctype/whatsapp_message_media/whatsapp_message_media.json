@@ -1,13 +1,15 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-10-03 10:00:00.000000",
+ "creation": "2025-10-04 17:59:19.227711",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "media_type",
   "file",
+  "remote_media_id",
+  "media_hash",
   "column_break_1",
   "filename",
   "filesize",
@@ -44,7 +46,7 @@
   {
    "fieldname": "filesize",
    "fieldtype": "Int",
-   "label": "Tamaño (bytes)"
+   "label": "Tama\u00f1o (bytes)"
   },
   {
    "fieldname": "column_break_2",
@@ -64,11 +66,24 @@
    "fieldname": "thumbnail",
    "fieldtype": "Attach Image",
    "label": "Miniatura"
+  },
+  {
+   "fieldname": "remote_media_id",
+   "fieldtype": "Data",
+   "label": "Remote Media Id",
+   "length": 260
+  },
+  {
+   "fieldname": "media_hash",
+   "fieldtype": "Data",
+   "label": "Media Hash",
+   "length": 500
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
- "modified": "2025-10-03 10:00:00.000000",
+ "links": [],
+ "modified": "2025-10-17 05:27:48.122331",
  "modified_by": "Administrator",
  "module": "Xappiens Whatsapp",
  "name": "WhatsApp Message Media",
@@ -78,4 +93,3 @@
  "sort_order": "DESC",
  "states": []
 }
-

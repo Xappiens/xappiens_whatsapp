@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-17 05:29:32.601442",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "session",
+  "status_id",
+  "type",
+  "caption",
+  "media_id",
+  "posted_at",
+  "expires_at",
+  "view_count",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "session",
+   "fieldtype": "Data",
+   "label": "Session",
+   "length": 260
+  },
+  {
+   "fieldname": "status_id",
+   "fieldtype": "Data",
+   "label": "Status Id",
+   "length": 260
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Data",
+   "label": "Type"
+  },
+  {
+   "fieldname": "caption",
+   "fieldtype": "Data",
+   "label": "Caption",
+   "length": 260
+  },
+  {
+   "fieldname": "media_id",
+   "fieldtype": "Data",
+   "label": "Media Id",
+   "length": 260
+  },
+  {
+   "fieldname": "posted_at",
+   "fieldtype": "Datetime",
+   "label": "Posted At"
+  },
+  {
+   "fieldname": "expires_at",
+   "fieldtype": "Datetime",
+   "label": "Expires at"
+  },
+  {
+   "fieldname": "view_count",
+   "fieldtype": "Data",
+   "label": "View Count"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Text",
+   "label": "Raw JSON"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-17 05:33:19.237828",
+ "modified_by": "Administrator",
+ "module": "Xappiens Whatsapp",
+ "name": "Whatsapp Status",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

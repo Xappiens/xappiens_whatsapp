@@ -12,8 +12,58 @@ import requests
 import base64
 
 
+def _get_first(data: Dict[str, Any], keys: List[str], default=None):
+    """Helper para obtener el primer valor disponible en una lista de claves."""
+    for key in keys:
+        value = data.get(key)
+        if value not in (None, "", []):
+            return value
+    return default
+
+
+def _extract_contact_id(contact_data: Dict[str, Any]) -> str:
+    """Obtiene el identificador único del contacto en el formato más completo posible."""
+    contact_id = None
+
+    raw_id = contact_data.get("id")
+    if isinstance(raw_id, dict):
+        contact_id = raw_id.get("_serialized") or raw_id.get("user")
+    else:
+        contact_id = raw_id
+
+    contact_id = contact_id or contact_data.get("contactId") or contact_data.get("jid") or contact_data.get("waId")
+
+    # Como fallback, usar el número con sufijo @c.us si no lo trae
+    if not contact_id:
+        number = _get_first(contact_data, ["number", "phoneNumber", "msisdn"])
+        if number:
+            clean = "".join(ch for ch in str(number) if ch.isdigit() or ch == "+")
+            if clean.startswith("+"):
+                clean = clean[1:]
+            contact_id = f"{clean}@c.us"
+
+    return contact_id
+
+
+def _extract_phone_number(contact_data: Dict[str, Any], contact_id: str) -> str:
+    """Obtiene el número de teléfono en formato MSISDN (sin sufijos @c.us)."""
+    number = _get_first(contact_data, ["number", "phoneNumber", "msisdn"])
+    if number:
+        clean = "".join(ch for ch in str(number) if ch.isdigit() or ch == "+")
+        if clean.startswith("00"):
+            clean = "+" + clean[2:]
+        elif not clean.startswith("+"):
+            clean = "+" + clean
+        return clean
+
+    # Si no hay número explícito, derivarlo del contact_id
+    if contact_id and "@c.us" in contact_id:
+        return "+" + contact_id.replace("@c.us", "")
+    return contact_id
+
+
 @frappe.whitelist()
-def sync_contacts(session_name: str, limit: int = 1000) -> Dict[str, Any]:
+def sync_contacts(session_name: str = None, limit: int = 1000) -> Dict[str, Any]:
     """
     Sincroniza todos los contactos de una sesión desde el servidor externo.
 
@@ -24,22 +74,61 @@ def sync_contacts(session_name: str, limit: int = 1000) -> Dict[str, Any]:
     Returns:
         Dict con resultado de la sincronización
     """
+    if not session_name:
+        default_session = frappe.db.get_single_value("WhatsApp Settings", "default_session")
+        if default_session:
+            session_name = default_session
+        else:
+            session_name = frappe.db.get_value(
+                "WhatsApp Session",
+                {"is_active": 1},
+                "name"
+            )
+            if not session_name:
+                session_name = frappe.db.get_value("WhatsApp Session", {}, "name")
+            if not session_name:
+                frappe.throw("No hay sesión de WhatsApp configurada")
+
     session = frappe.get_doc("WhatsApp Session", session_name)
 
     if not session.is_connected:
-        frappe.throw("La sesión debe estar conectada para sincronizar contactos")
+        try:
+            from .session_status import get_session_status as refresh_session_status
+
+            status_result = refresh_session_status(session_name=session.name)
+            if status_result.get("success"):
+                session.reload()
+        except Exception:
+            pass
+
+    if not session.is_connected:
+        return {
+            "success": False,
+            "message": "La sesión no está conectada"
+        }
 
     client = WhatsAppAPIClient(session.session_id)
 
     try:
-        # Obtener contactos del servidor
-        response = client.get("/client/getContacts/{sessionId}", params={"limit": limit})
+        # Obtener contactos del servidor usando la API REST actual
+        response = client.get_session_contacts(limit=limit)
 
         if not response.get("success"):
-            frappe.throw("Error al obtener contactos del servidor")
+            return {
+                "success": False,
+                "message": response.get("message") or "Error al obtener contactos del servidor"
+            }
 
-        contacts_data = response.get("contacts", [])
-        total = response.get("total", 0)
+        data = response.get("data") or {}
+        if isinstance(data, dict):
+            contacts_data = data.get("items") or data.get("contacts") or data.get("data") or []
+            total = data.get("total") if data.get("total") is not None else len(contacts_data)
+        elif isinstance(data, list):
+            contacts_data = data
+            total = len(contacts_data)
+        else:
+            contacts_data = response.get("contacts", [])
+            total = response.get("total", len(contacts_data))
 
         created = 0
         updated = 0
@@ -47,17 +136,37 @@ def sync_contacts(session_name: str, limit: int = 1000) -> Dict[str, Any]:
 
         for contact_data in contacts_data:
             try:
-                contact_id = contact_data.get("id", {}).get("_serialized") or contact_data.get("id")
+                contact_id = (
+                    contact_data.get("id", {}).get("_serialized")
+                    if isinstance(contact_data.get("id"), dict)
+                    else contact_data.get("id")
+                ) or contact_data.get("contactId") or contact_data.get("jid") or contact_data.get("waId")
 
                 if not contact_id:
                     continue
 
+                phone_number = _extract_phone_number(contact_data, contact_id)
 
-                # Buscar si el contacto ya existe
-                existing = frappe.db.exists("WhatsApp Contact", {
-                    "session": session.name,
-                    "phone_number": contact_id
-                })
+                # Buscar si el contacto ya existe por contact_id o número
+                existing = None
+                if contact_id:
+                    existing = frappe.db.get_value(
+                        "WhatsApp Contact",
+                        {"session": session.name, "contact_id": contact_id},
+                        "name"
+                    )
+                if not existing and phone_number:
+                    existing = frappe.db.get_value(
+                        "WhatsApp Contact",
+                        {"session": session.name, "phone_number": phone_number},
+                        "name"
+                    )
+                if not existing and contact_id:
+                    existing = frappe.db.get_value(
+                        "WhatsApp Contact",
+                        {"session": session.name, "phone_number": contact_id},
+                        "name"
+                    )
 
                 if existing:
                     # Actualizar contacto existente
@@ -101,7 +210,10 @@ def sync_contacts(session_name: str, limit: int = 1000) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        frappe.throw(f"Error al sincronizar contactos: {str(e)}")
+        return {
+            "success": False,
+            "message": str(e)
+        }
 
 
 @frappe.whitelist()
@@ -120,15 +232,16 @@ def get_contact_details(session_name: str, contact_id: str) -> Dict[str, Any]:
     client = WhatsAppAPIClient(session.session_id)
 
     try:
-        response = client.post("/client/getContactById/{sessionId}", data={"contactId": contact_id})
+        response = client.get_contact_info(contact_id)
 
         if response.get("success"):
+            contact_payload = response.get("data") or response.get("contact") or {}
             return {
                 "success": True,
-                "contact": response.get("contact", {})
+                "contact": contact_payload
             }
         else:
-            frappe.throw("Error al obtener detalles del contacto")
+            frappe.throw(response.get("message") or "Error al obtener detalles del contacto")
 
     except Exception as e:
         return {
@@ -566,15 +679,14 @@ def update_contact_avatar(contact_name: str, avatar_url: str = None) -> Dict[str
         # Si no se provee URL, obtenerla del servidor
         if not avatar_url:
             client = WhatsAppAPIClient(session.session_id)
-            response = client.post(
-                "/client/getProfilePicUrl/{sessionId}",
-                data={"contactId": contact.phone_number}
-            )
+            lookup_id = contact.contact_id or contact.phone_number
+            response = client.get_contact_info(lookup_id)
 
             if response.get("success"):
-                avatar_url = response.get("result")
+                payload = response.get("data") or response.get("contact") or {}
+                avatar_url = _get_first(payload, ["profilePicUrl", "profilePicURL", "profilePictureUrl"])
             else:
-                return {"success": False, "message": "No se pudo obtener URL del avatar"}
+                return {"success": False, "message": response.get("message") or "No se pudo obtener URL del avatar"}
 
         if not avatar_url or avatar_url == "default":
             return {"success": False, "message": "Contacto sin foto de perfil"}
@@ -648,47 +760,68 @@ def _create_contact_from_data(contact_data: Dict, session: Any) -> Any:
     Returns:
         Documento WhatsApp Contact creado
     """
-    contact_id = contact_data.get("id", {}).get("_serialized") or contact_data.get("id")
+    contact_id = _extract_contact_id(contact_data)
+    phone_number = _extract_phone_number(contact_data, contact_id)
 
     # Truncar campos largos para evitar errores de longitud
     # Usar el número de teléfono como nombre si no hay otros datos
-    contact_name = (contact_data.get("name") or contact_data.get("pushname") or contact_data.get("number") or contact_id)[:140]
-    pushname = (contact_data.get("pushname") or "")[:140]
-    short_name = (contact_data.get("shortName") or "")[:140]
-    about = (contact_data.get("about") or "")[:140]
-    verified_name = (contact_data.get("verifiedName") or "")[:140]
+    contact_name = (_get_first(contact_data, ["name", "pushname", "verifiedName", "formattedName", "number"], contact_id) or contact_id)[:140]
+    pushname = (_get_first(contact_data, ["pushname", "verifiedName", "formattedName"], "") or "")[:140]
+    short_name = (_get_first(contact_data, ["shortName", "short_name"], "") or "")[:140]
+    about = (_get_first(contact_data, ["about", "statusMessage"], "") or "")[:140]
+    verified_name = (_get_first(contact_data, ["verifiedName", "businessName"], "") or "")[:140]
 
     # Procesar fechas
     first_seen = None
     last_seen = None
-    if contact_data.get("firstSeen"):
+    if contact_data.get("firstSeen") or contact_data.get("firstSeenAt"):
         from datetime import datetime
-        first_seen = datetime.fromtimestamp(contact_data.get("firstSeen"))
-    if contact_data.get("lastSeen"):
+        ts = contact_data.get("firstSeen") or contact_data.get("firstSeenAt")
+        if isinstance(ts, (int, float)) and ts > 1_000_000_000_000:
+            ts = ts / 1000
+        try:
+            if isinstance(ts, str):
+                first_seen = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            else:
+                first_seen = datetime.fromtimestamp(ts)
+        except Exception:
+            first_seen = None
+    if contact_data.get("lastSeen") or contact_data.get("lastSeenAt"):
         from datetime import datetime
-        last_seen = datetime.fromtimestamp(contact_data.get("lastSeen"))
+        ts = contact_data.get("lastSeen") or contact_data.get("lastSeenAt")
+        if isinstance(ts, (int, float)) and ts > 1_000_000_000_000:
+            ts = ts / 1000
+        try:
+            if isinstance(ts, str):
+                last_seen = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            else:
+                last_seen = datetime.fromtimestamp(ts)
+        except Exception:
+            last_seen = None
+
+    profile_pic_url = _get_first(contact_data, ["profilePicUrl", "profilePicURL", "profilePictureUrl"])
 
     contact = frappe.get_doc({
         "doctype": "WhatsApp Contact",
         "session": session.name,
         "contact_id": contact_id,
-        "phone_number": contact_id,
+        "phone_number": phone_number or contact_id,
         "contact_name": contact_name,
         "pushname": pushname,
         "short_name": short_name,
-        "profile_pic_url": contact_data.get("profilePicUrl"),
+        "profile_pic_url": profile_pic_url,
         "about": about,
-        "last_profile_pic_update": frappe.utils.now() if contact_data.get("profilePicUrl") else None,
+        "last_profile_pic_update": frappe.utils.now() if profile_pic_url else None,
         "is_user": contact_data.get("isUser", False),
         "is_group": contact_data.get("isGroup", False),
         "is_my_contact": contact_data.get("isMyContact", False),
-        "is_wa_contact": contact_data.get("isWAContact", False),
+        "is_wa_contact": contact_data.get("isWAContact", False) or contact_data.get("isWhatsApp", False),
         "is_blocked": contact_data.get("isBlocked", False),
         "is_enterprise": contact_data.get("isEnterprise", False),
-        "is_verified": contact_data.get("isVerified", False),
+        "is_verified": contact_data.get("isVerified", False) or bool(_get_first(contact_data, ["verifiedName", "businessName"])),
         "verified_name": verified_name,
         "verified_level": contact_data.get("verifiedLevel"),
-        "verification_date": frappe.utils.now() if contact_data.get("isVerified") else None,
+        "verification_date": frappe.utils.now() if (contact_data.get("isVerified") or verified_name) else None,
         "first_seen": first_seen,
         "last_seen": last_seen,
         "last_sync": frappe.utils.now(),
@@ -709,21 +842,39 @@ def _update_contact_from_data(contact: Any, contact_data: Dict, session: Any):
         session: Documento WhatsApp Session
     """
     # Truncar campos largos para evitar errores de longitud
-    contact_name = (contact_data.get("name") or contact_data.get("pushname") or contact_data.get("number") or contact.contact_name)[:140]
-    pushname = (contact_data.get("pushname") or "")[:140]
-    short_name = (contact_data.get("shortName") or "")[:140]
-    about = (contact_data.get("about") or "")[:140]
-    verified_name = (contact_data.get("verifiedName") or "")[:140]
+    contact_name = (_get_first(contact_data, ["name", "pushname", "verifiedName", "formattedName", "number"], contact.contact_name) or contact.contact_name)[:140]
+    pushname = (_get_first(contact_data, ["pushname", "verifiedName", "formattedName"], contact.pushname) or contact.pushname or "")[:140]
+    short_name = (_get_first(contact_data, ["shortName", "short_name"], contact.short_name or "") or "")[:140]
+    about = (_get_first(contact_data, ["about", "statusMessage"], contact.about or "") or "")[:140]
+    verified_name = (_get_first(contact_data, ["verifiedName", "businessName"], contact.verified_name or "") or "")[:140]
 
     # Procesar fechas
     first_seen = None
     last_seen = None
-    if contact_data.get("firstSeen"):
+    if contact_data.get("firstSeen") or contact_data.get("firstSeenAt"):
         from datetime import datetime
-        first_seen = datetime.fromtimestamp(contact_data.get("firstSeen"))
-    if contact_data.get("lastSeen"):
+        ts = contact_data.get("firstSeen") or contact_data.get("firstSeenAt")
+        if isinstance(ts, (int, float)) and ts > 1_000_000_000_000:
+            ts = ts / 1000
+        try:
+            if isinstance(ts, str):
+                first_seen = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            else:
+                first_seen = datetime.fromtimestamp(ts)
+        except Exception:
+            first_seen = None
+    if contact_data.get("lastSeen") or contact_data.get("lastSeenAt"):
         from datetime import datetime
-        last_seen = datetime.fromtimestamp(contact_data.get("lastSeen"))
+        ts = contact_data.get("lastSeen") or contact_data.get("lastSeenAt")
+        if isinstance(ts, (int, float)) and ts > 1_000_000_000_000:
+            ts = ts / 1000
+        try:
+            if isinstance(ts, str):
+                last_seen = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            else:
+                last_seen = datetime.fromtimestamp(ts)
+        except Exception:
+            last_seen = None
 
     contact.contact_name = contact_name
     contact.pushname = pushname
@@ -732,26 +883,30 @@ def _update_contact_from_data(contact: Any, contact_data: Dict, session: Any):
     contact.verified_name = verified_name
     contact.is_user = contact_data.get("isUser", False)
     contact.is_group = contact_data.get("isGroup", False)
-    contact.is_wa_contact = contact_data.get("isWAContact", False)
+    contact.is_wa_contact = contact_data.get("isWAContact", False) or contact_data.get("isWhatsApp", False)
     contact.is_my_contact = contact_data.get("isMyContact", False)
     contact.is_blocked = contact_data.get("isBlocked", False)
     contact.is_enterprise = contact_data.get("isEnterprise", False)
-    contact.is_verified = contact_data.get("isVerified", False)
+    contact.is_verified = contact_data.get("isVerified", False) or bool(_get_first(contact_data, ["verifiedName", "businessName"]))
     contact.verified_level = contact_data.get("verifiedLevel")
-    contact.profile_pic_url = contact_data.get("profilePicUrl")
+    profile_pic_url = _get_first(contact_data, ["profilePicUrl", "profilePicURL", "profilePictureUrl"])
+    contact.profile_pic_url = profile_pic_url
+
+    phone_number = _extract_phone_number(contact_data, contact.contact_id)
+    if phone_number:
+        contact.phone_number = phone_number
 
     # Actualizar fechas si están disponibles
     if first_seen:
         contact.first_seen = first_seen
     if last_seen:
         contact.last_seen = last_seen
-    if contact_data.get("profilePicUrl"):
+    if profile_pic_url:
         contact.last_profile_pic_update = frappe.utils.now()
-    if contact_data.get("isVerified"):
+    if contact.is_verified:
         contact.verification_date = frappe.utils.now()
 
     contact.last_sync = frappe.utils.now()
     contact.sync_status = "Synced"
 
     contact.save(ignore_permissions=True)
-

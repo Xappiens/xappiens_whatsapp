@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Cliente base para comunicación con el servidor de WhatsApp.
+Cliente base para comunicación con el servidor de WhatsApp con Baileys.
+Soporta autenticación JWT + API Key según documentación Inbox Hub.
 """
 
 import frappe
 import requests
 from typing import Dict, Any, Optional
 import json
+from datetime import datetime, timedelta
 
 
 class WhatsAppAPIClient:
     """
-    Cliente base para hacer requests al servidor de WhatsApp externo.
+    Cliente base para hacer requests al servidor de WhatsApp externo (Baileys/Inbox Hub).
     Lee la configuración de WhatsApp Settings.
+    Implementa autenticación JWT + API Key según documentación.
     """
 
     def __init__(self, session_id: Optional[str] = None):
@@ -27,8 +30,12 @@ class WhatsAppAPIClient:
         self.settings = self._get_settings()
         self.base_url = self.settings.api_base_url
         self.api_key = self.settings.get_password("api_key")
+        self.email = self.settings.api_email
+        self.password = self.settings.get_password("api_password")
         self.timeout = self.settings.api_timeout or 30
         self.retry_attempts = self.settings.api_retry_attempts or 3
+        self.access_token = None
+        self.token_expiry = None
 
     def _get_settings(self) -> Any:
         """
@@ -50,15 +57,57 @@ class WhatsAppAPIClient:
 
         return settings
 
+    def _authenticate(self) -> str:
+        """
+        Autentica con el servidor Baileys y obtiene JWT token.
+        Implementa cache de token para evitar autenticaciones innecesarias.
+
+        Returns:
+            JWT access token
+        """
+        # Si tenemos un token válido, usarlo
+        if self.access_token and self.token_expiry and datetime.now() < self.token_expiry:
+            return self.access_token
+
+        # Realizar login
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/auth/login",
+                json={
+                    "identifier": self.email,
+                    "password": self.password
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=self.timeout
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") and data.get("data", {}).get("accessToken"):
+                    self.access_token = data["data"]["accessToken"]
+                    # Token válido por 24h, renovar 1h antes
+                    self.token_expiry = datetime.now() + timedelta(hours=23)
+                    return self.access_token
+
+            frappe.throw(f"Error de autenticación: {response.text}")
+
+        except requests.exceptions.RequestException as e:
+            frappe.throw(f"Error conectando al servidor de autenticación: {str(e)}")
+
     def _get_headers(self) -> Dict[str, str]:
         """
         Construye los headers para las peticiones.
+        Incluye JWT token y API Key según documentación Baileys/Inbox Hub.
 
         Returns:
             Dict con headers
         """
+        # Obtener token JWT
+        jwt_token = self._authenticate()
+
         headers = {
             "Content-Type": "application/json",
+            "Authorization": f"Bearer {jwt_token}"
         }
 
         if self.api_key:
@@ -96,7 +145,12 @@ class WhatsAppAPIClient:
         headers = self._get_headers()
 
         # Realizar petición con reintentos
-        last_error = None
+        last_response = {
+            "success": False,
+            "status_code": None,
+            "message": "Unknown error",
+            "data": None
+        }
         for attempt in range(self.retry_attempts):
             try:
                 response = requests.request(
@@ -108,28 +162,66 @@ class WhatsAppAPIClient:
                     timeout=self.timeout
                 )
 
-                # Si es exitoso, retornar
-                if response.status_code == 200:
+                # Si es exitoso, retornar (Baileys usa 200 y 201)
+                if response.status_code in [200, 201]:
                     return response.json()
 
-                # Si es error del cliente (4xx), no reintentar
-                if 400 <= response.status_code < 500:
-                    error_data = response.json() if response.text else {}
-                    frappe.throw(
-                        f"Error del servidor WhatsApp ({response.status_code}): {error_data.get('message', response.text)}"
-                    )
+                # Manejo explícito de respuestas de error
+                if response.status_code >= 400:
+                    try:
+                        error_data = response.json() if response.text else {}
+                    except Exception:
+                        error_data = {}
 
-                # Si es error del servidor (5xx), reintentar
-                last_error = f"Error {response.status_code}: {response.text}"
+                    error_message = error_data.get('message') or error_data.get('error') or response.text
+                    # Si no debemos reintentar (4xx excepto 429) devolvemos inmediatamente
+                    if 400 <= response.status_code < 500 and response.status_code != 429:
+                        return {
+                            "success": False,
+                            "status_code": response.status_code,
+                            "message": error_message,
+                            "data": error_data
+                        }
+
+                    # Para 5xx seguimos reintentando, pero guardamos el error
+                    last_response = {
+                        "success": False,
+                        "status_code": response.status_code,
+                        "message": error_message,
+                        "data": error_data
+                    }
+                    continue
+
+                last_response = {
+                    "success": False,
+                    "status_code": response.status_code,
+                    "message": response.text,
+                    "data": None
+                }
 
             except requests.exceptions.Timeout:
-                last_error = f"Timeout después de {self.timeout} segundos"
+                last_response = {
+                    "success": False,
+                    "status_code": None,
+                    "message": f"Timeout después de {self.timeout} segundos",
+                    "data": None
+                }
 
             except requests.exceptions.ConnectionError:
-                last_error = f"Error de conexión al servidor {self.base_url}"
+                last_response = {
+                    "success": False,
+                    "status_code": None,
+                    "message": f"Error de conexión al servidor {self.base_url}",
+                    "data": None
+                }
 
             except requests.exceptions.RequestException as e:
-                last_error = f"Error en la petición: {str(e)}"
+                last_response = {
+                    "success": False,
+                    "status_code": None,
+                    "message": f"Error en la petición: {str(e)}",
+                    "data": None
+                }
 
             # Si no es el último intento, esperar un poco
             if attempt < self.retry_attempts - 1:
@@ -137,7 +229,7 @@ class WhatsAppAPIClient:
                 time.sleep(2 ** attempt)  # Backoff exponencial
 
         # Si llegamos aquí, todos los intentos fallaron
-        frappe.throw(f"Error después de {self.retry_attempts} intentos: {last_error}")
+        return last_response
 
     def get(self, endpoint: str, params: Optional[Dict] = None, use_session_id: bool = True) -> Dict[str, Any]:
         """
@@ -194,3 +286,156 @@ class WhatsAppAPIClient:
         """
         return self._make_request("DELETE", endpoint, use_session_id=use_session_id)
 
+    # ========== MÉTODOS ESPECÍFICOS PARA BAILEYS/INBOX HUB ==========
+
+    def get_sessions(self, page: int = 1, limit: int = 100, status: str = None) -> Dict[str, Any]:
+        """
+        Obtiene lista de sesiones del usuario.
+
+        Args:
+            page: Página de resultados
+            limit: Límite de resultados
+            status: Filtrar por estado (connected, disconnected, etc.)
+
+        Returns:
+            Dict con lista de sesiones
+        """
+        params = {"page": page, "limit": limit}
+        if status:
+            params["status"] = status
+
+        return self.get("/api/sessions", params=params, use_session_id=False)
+
+    def get_session_status(self, session_db_id: int) -> Dict[str, Any]:
+        """
+        Obtiene estado de una sesión específica.
+
+        Args:
+            session_db_id: ID de la sesión en la BD del servidor
+
+        Returns:
+            Dict con estado de la sesión
+        """
+        return self.get(f"/api/sessions/{session_db_id}/status", use_session_id=False)
+
+    def get_session_contacts(self, page: int = 1, limit: int = 100, search: str = None) -> Dict[str, Any]:
+        """
+        Obtiene contactos de una sesión.
+
+        Args:
+            page: Página de resultados
+            limit: Límite de resultados
+            search: Término de búsqueda
+
+        Returns:
+            Dict con lista de contactos
+        """
+        if not self.session_id:
+            frappe.throw("session_id es requerido para obtener contactos")
+
+        params = {"page": page, "limit": limit}
+        if search:
+            params["search"] = search
+
+        # Endpoint según documentación: /api/contacts/:sessionId
+        return self.get(f"/api/contacts/{self.session_id}", params=params, use_session_id=False)
+
+    def get_contact_info(self, contact_id: str) -> Dict[str, Any]:
+        """
+        Obtiene información detallada de un contacto.
+
+        Args:
+            contact_id: Identificador del contacto (MSISDN o JID)
+
+        Returns:
+            Dict con los datos del contacto
+        """
+        if not self.session_id:
+            frappe.throw("session_id es requerido para obtener información del contacto")
+
+        return self.get(f"/api/contacts/{self.session_id}/info/{contact_id}", use_session_id=False)
+
+    def get_session_chats(self, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        """
+        Obtiene lista de chats/conversaciones de una sesión.
+
+        Args:
+            page: Página de resultados
+            limit: Límite de resultados
+
+        Returns:
+            Dict con lista de chats
+        """
+        if not self.session_id:
+            frappe.throw("session_id es requerido para obtener chats")
+
+        params = {"page": page, "limit": limit}
+
+        # Endpoint según documentación: /api/messages/:sessionId/chats
+        return self.get(f"/api/messages/{self.session_id}/chats", params=params, use_session_id=False)
+
+    def get_chat_messages(self, chat_id: str, page: int = 1, limit: int = 50) -> Dict[str, Any]:
+        """
+        Obtiene mensajes de un chat específico.
+
+        Args:
+            chat_id: ID del chat
+            page: Página de resultados
+            limit: Límite de resultados
+
+        Returns:
+            Dict con lista de mensajes
+        """
+        if not self.session_id:
+            frappe.throw("session_id es requerido para obtener mensajes")
+
+        params = {"chatId": chat_id, "page": page, "limit": limit}
+
+        # Endpoint correcto según documentación: /api/messages/:sessionId?chatId=:chatId
+        return self.get(f"/api/messages/{self.session_id}", params=params, use_session_id=False)
+
+    def send_message(self, to: str, message: str, message_type: str = "text") -> Dict[str, Any]:
+        """
+        Envía un mensaje de WhatsApp.
+
+        Args:
+            to: Número de teléfono destinatario
+            message: Contenido del mensaje
+            message_type: Tipo de mensaje (text, image, etc.)
+
+        Returns:
+            Dict con resultado del envío
+        """
+        if not self.session_id:
+            frappe.throw("session_id es requerido para enviar mensajes")
+
+        # Endpoint según documentación: /api/messages/:sessionId/send
+        return self.post(
+            f"/api/messages/{self.session_id}/send",
+            data={
+                "to": to,
+                "message": message,
+                "type": message_type
+            },
+            use_session_id=False
+        )
+
+    def mark_chat_as_read(self, chat_id: str) -> Dict[str, Any]:
+        """
+        Marca un chat como leído.
+
+        Args:
+            chat_id: ID del chat
+
+        Returns:
+            Dict con resultado
+        """
+        if not self.session_id:
+            frappe.throw("session_id es requerido para marcar como leído")
+
+        # Endpoint según documentación: /api/messages/:sessionId/:chatId/read
+        return self.put(
+            f"/api/messages/{self.session_id}/{chat_id}/read",
+            data={},
+            use_session_id=False
+        )

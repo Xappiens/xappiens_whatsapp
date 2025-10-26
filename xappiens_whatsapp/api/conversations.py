@@ -11,7 +11,7 @@ from typing import Dict, Any, List
 
 
 @frappe.whitelist()
-def sync_conversations(session_name: str, limit: int = 1000) -> Dict[str, Any]:
+def sync_conversations(session_name: str = None, limit: int = 1000) -> Dict[str, Any]:
     """
     Sincroniza todas las conversaciones de una sesión desde el servidor externo.
 
@@ -22,30 +22,86 @@ def sync_conversations(session_name: str, limit: int = 1000) -> Dict[str, Any]:
     Returns:
         Dict con resultado de la sincronización
     """
+    if not session_name:
+        default_session = frappe.db.get_single_value("WhatsApp Settings", "default_session")
+        if default_session:
+            session_name = default_session
+        else:
+            # Fallback a la primera sesión activa disponible
+            session_name = frappe.db.get_value(
+                "WhatsApp Session",
+                {"is_active": 1},
+                "name"
+            )
+            if not session_name:
+                session_name = frappe.db.get_value("WhatsApp Session", {}, "name")
+            if not session_name:
+                frappe.throw("No hay sesión de WhatsApp configurada")
+
     session = frappe.get_doc("WhatsApp Session", session_name)
 
     if not session.is_connected:
-        frappe.throw("La sesión debe estar conectada para sincronizar conversaciones")
+        # Intentar actualizar estado de la sesión antes de abandonar
+        try:
+            from .session_status import get_session_status as refresh_session_status
+
+            status_result = refresh_session_status(session_name=session.name)
+            if status_result.get("success"):
+                session.reload()
+        except Exception:
+            pass
+
+    if not session.is_connected:
+        frappe.log_error(f"Sync conversations aborted: session {session.name} not connected")
+        return {
+            "success": False,
+            "message": "La sesión no está conectada"
+        }
 
     client = WhatsAppAPIClient(session.session_id)
 
     try:
-        # Obtener chats del servidor
-        response = client.get("/client/getChats/{sessionId}", params={"limit": limit})
+        # Obtener chats del servidor usando la API REST actual
+        response = client.get_session_chats(limit=limit)
 
         if not response.get("success"):
-            frappe.throw("Error al obtener chats del servidor")
+            frappe.log_error(f"Sync conversations error response: {response}")
+            return {
+                "success": False,
+                "message": response.get("message") or "Error al obtener chats del servidor",
+                "details": response
+            }
 
-        chats_data = response.get("chats", [])
-        total = response.get("total", 0)
+        # La respuesta nueva viene en data.items; mantener compatibilidad con el formato anterior
+        data = response.get("data") or {}
+        if isinstance(data, dict):
+            chats_data = data.get("items") or data.get("chats") or data.get("data") or []
+            total = data.get("total") if data.get("total") is not None else len(chats_data)
+        elif isinstance(data, list):
+            chats_data = data
+            total = len(chats_data)
+        else:
+            chats_data = response.get("chats", [])
+            total = response.get("total", len(chats_data))
+
+        # Como fallback, si la API devolvió 'messages' (formato antiguo), usarlo
+        if not chats_data and response.get("chats"):
+            chats_data = response.get("chats", [])
+            total = response.get("total", len(chats_data))
 
         created = 0
         updated = 0
         errors = 0
 
+        frappe.log_error(f"Sync conversations received {len(chats_data)} chats")
+
         for chat_data in chats_data:
             try:
-                chat_id = chat_data.get("id", {}).get("_serialized") or chat_data.get("id")
+                chat_id = (
+                    chat_data.get("id", {}).get("_serialized")
+                    if isinstance(chat_data.get("id"), dict)
+                    else chat_data.get("id")
+                ) or chat_data.get("chatId") or chat_data.get("jid")
 
                 if not chat_id:
                     continue
@@ -92,7 +148,10 @@ def sync_conversations(session_name: str, limit: int = 1000) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        frappe.throw(f"Error al sincronizar conversaciones: {str(e)}")
+        return {
+            "success": False,
+            "message": str(e)
+        }
 
 
 @frappe.whitelist()
@@ -218,15 +277,43 @@ def get_conversation_details(session_name: str, chat_id: str) -> Dict[str, Any]:
     client = WhatsAppAPIClient(session.session_id)
 
     try:
-        response = client.post("/client/getChatById/{sessionId}", data={"chatId": chat_id})
+        # No existe un endpoint dedicado a detalles, utilizar la lista de chats y filtrar
+        response = client.get_session_chats(limit=200)
 
-        if response.get("success"):
-            return {
-                "success": True,
-                "chat": response.get("chat", {})
-            }
-        else:
-            frappe.throw("Error al obtener detalles de la conversación")
+        if not response.get("success"):
+            frappe.throw(response.get("message") or "Error al obtener detalles de la conversación")
+
+        def _iter_chats(payload):
+            if not payload:
+                return []
+            if isinstance(payload, dict):
+                items = payload.get("items") or payload.get("chats") or payload.get("data") or []
+                if isinstance(items, list):
+                    return items
+                return []
+            if isinstance(payload, list):
+                return payload
+            return []
+
+        chats = _iter_chats(response.get("data")) or _iter_chats(response.get("chats"))
+
+        for chat in chats:
+            chat_identifier = (
+                chat.get("id", {}).get("_serialized")
+                if isinstance(chat.get("id"), dict)
+                else chat.get("id")
+            ) or chat.get("chatId") or chat.get("jid")
+
+            if chat_identifier == chat_id:
+                return {
+                    "success": True,
+                    "chat": chat
+                }
+
+        return {
+            "success": False,
+            "message": "Conversación no encontrada en el servidor"
+        }
 
     except Exception as e:
         return {
@@ -246,16 +333,34 @@ def _create_conversation_from_data(chat_data: Dict, session: Any) -> Any:
     Returns:
         Documento WhatsApp Conversation creado
     """
-    chat_id = chat_data.get("id", {}).get("_serialized") or chat_data.get("id")
+    raw_id = chat_data.get("id")
+    if isinstance(raw_id, dict):
+        chat_id = raw_id.get("_serialized") or raw_id.get("user")
+    else:
+        chat_id = raw_id
+    chat_id = chat_id or chat_data.get("chatId") or chat_data.get("jid") or chat_data.get("waId")
+    if chat_id and "@s.whatsapp.net" in chat_id:
+        chat_id = chat_id.replace("@s.whatsapp.net", "@c.us")
+
     is_group = chat_data.get("isGroup", False)
 
     # Buscar contacto si no es grupo
     contact = None
     if not is_group:
-        contact = frappe.db.exists("WhatsApp Contact", {
-            "session": session.name,
-            "phone_number": chat_id
-        })
+        contact = frappe.db.get_value(
+            "WhatsApp Contact",
+            {"session": session.name, "contact_id": chat_id},
+            "name"
+        )
+        if not contact:
+            normalized_phone = chat_id.replace("@c.us", "") if chat_id else None
+            if normalized_phone:
+                formatted_phone = f"+{normalized_phone}" if not normalized_phone.startswith("+") else normalized_phone
+                contact = frappe.db.get_value(
+                    "WhatsApp Contact",
+                    {"session": session.name, "phone_number": formatted_phone},
+                    "name"
+                )
 
     # Buscar grupo si es grupo
     group = None
@@ -266,16 +371,39 @@ def _create_conversation_from_data(chat_data: Dict, session: Any) -> Any:
         })
 
     # Procesar último mensaje
-    last_message = chat_data.get("lastMessage", {})
+    last_message = chat_data.get("lastMessage") or chat_data.get("last_message") or chat_data.get("lastMessageData") or {}
     last_message_time = None
     last_message_preview = None
 
     if last_message:
-        timestamp = last_message.get("timestamp")
+        timestamp = (
+            last_message.get("timestamp")
+            or last_message.get("sentAt")
+            or last_message.get("createdAt")
+            or chat_data.get("lastMessageAt")
+        )
         if timestamp:
             from datetime import datetime
-            last_message_time = datetime.fromtimestamp(timestamp)
-        last_message_preview = last_message.get("body", "")[:200]
+            # Algunas respuestas ya envían timestamps en ms o en ISO-8601
+            try:
+                if isinstance(timestamp, (int, float)):
+                    # Detectar si viene en milisegundos
+                    if timestamp > 1_000_000_000_000:
+                        timestamp = timestamp / 1000
+                    last_message_time = datetime.fromtimestamp(timestamp)
+                elif isinstance(timestamp, str):
+                    last_message_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            except Exception:
+                last_message_time = None
+
+        body = (
+            last_message.get("body")
+            or last_message.get("message")
+            or last_message.get("text")
+            or chat_data.get("lastMessageText")
+            or ""
+        )
+        last_message_preview = body[:200]
 
     # Procesar información adicional
     first_message_time = None
@@ -288,14 +416,17 @@ def _create_conversation_from_data(chat_data: Dict, session: Any) -> Any:
         from datetime import datetime
         mute_expiration = datetime.fromtimestamp(chat_data.get("muteExpiration"))
 
+    title = (chat_data.get("name") or chat_data.get("contactName") or chat_id or "")[:140]
+    contact_name = (chat_data.get("contactName") or chat_data.get("name") or "")[:140]
+
     conversation = frappe.get_doc({
         "doctype": "WhatsApp Conversation",
         "session": session.name,
         "chat_id": chat_id,
-        "conversation_name": chat_data.get("name") or chat_id,
+        "conversation_name": title,
         "is_group": is_group,
         "contact": contact if contact else None,
-        "contact_name": chat_data.get("contactName", ""),
+        "contact_name": contact_name,
         "phone_number": chat_id if not is_group else None,
         "group": group if group else None,
         "status": "Active",
@@ -305,10 +436,10 @@ def _create_conversation_from_data(chat_data: Dict, session: Any) -> Any:
         "is_pinned": chat_data.get("pinned", False),
         "is_muted": chat_data.get("isMuted", False),
         "unread_count": chat_data.get("unreadCount", 0),
-        "total_messages": chat_data.get("totalMessages", 0),
-        "last_message": last_message.get("body", "") if last_message else None,
+        "total_messages": chat_data.get("totalMessages", 0) or chat_data.get("messageCount", 0),
+        "last_message": last_message_preview,
         "last_message_time": last_message_time,
-        "last_message_from_me": last_message.get("fromMe", False) if last_message else False,
+        "last_message_from_me": last_message.get("fromMe", False) if isinstance(last_message, dict) else False,
         "first_message_time": first_message_time,
         "mute_expiration": mute_expiration,
         "notifications_enabled": not chat_data.get("isMuted", False),
@@ -330,30 +461,63 @@ def _update_conversation_from_data(conversation: Any, chat_data: Dict, session: 
         session: Documento WhatsApp Session
     """
     # Procesar último mensaje
-    last_message = chat_data.get("lastMessage", {})
+    last_message = chat_data.get("lastMessage") or chat_data.get("last_message") or {}
     last_message_time = None
     last_message_preview = None
 
     if last_message:
-        timestamp = last_message.get("timestamp")
+        timestamp = (
+            last_message.get("timestamp")
+            or last_message.get("sentAt")
+            or last_message.get("createdAt")
+            or chat_data.get("lastMessageAt")
+        )
         if timestamp:
             from datetime import datetime
-            last_message_time = datetime.fromtimestamp(timestamp)
-        last_message_preview = last_message.get("body", "")[:200]
+            try:
+                if isinstance(timestamp, (int, float)):
+                    if timestamp > 1_000_000_000_000:
+                        timestamp = timestamp / 1000
+                    last_message_time = datetime.fromtimestamp(timestamp)
+                elif isinstance(timestamp, str):
+                    last_message_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            except Exception:
+                last_message_time = None
+        body = (
+            last_message.get("body")
+            or last_message.get("message")
+            or last_message.get("text")
+            or chat_data.get("lastMessageText")
+            or ""
+        )
+        last_message_preview = body[:200]
 
     # Actualizar campos usando frappe.db.set_value para evitar conflictos de concurrencia
     try:
-        frappe.db.set_value("WhatsApp Conversation", conversation.name, "conversation_name", chat_data.get("name") or conversation.conversation_name)
+        title = (chat_data.get("name") or chat_data.get("contactName") or conversation.conversation_name or "")[:140]
+        contact_name = (chat_data.get("contactName") or chat_data.get("name") or conversation.contact_name or "")[:140]
+
+        frappe.db.set_value("WhatsApp Conversation", conversation.name, "conversation_name", title)
         frappe.db.set_value("WhatsApp Conversation", conversation.name, "unread_count", chat_data.get("unreadCount", 0))
         frappe.db.set_value("WhatsApp Conversation", conversation.name, "is_read_only", chat_data.get("isReadOnly", False))
         frappe.db.set_value("WhatsApp Conversation", conversation.name, "is_pinned", chat_data.get("pinned", False))
         frappe.db.set_value("WhatsApp Conversation", conversation.name, "is_archived", chat_data.get("archived", False))
         frappe.db.set_value("WhatsApp Conversation", conversation.name, "is_muted", chat_data.get("isMuted", False))
+        frappe.db.set_value("WhatsApp Conversation", conversation.name, "contact_name", contact_name)
 
         if last_message_time:
             frappe.db.set_value("WhatsApp Conversation", conversation.name, "last_message_time", last_message_time)
-        if last_message_preview:
-            frappe.db.set_value("WhatsApp Conversation", conversation.name, "last_message_preview", last_message_preview)
+        if last_message_preview is not None:
+            frappe.db.set_value("WhatsApp Conversation", conversation.name, "last_message", last_message_preview)
+        if isinstance(last_message, dict) and "fromMe" in last_message:
+            frappe.db.set_value("WhatsApp Conversation", conversation.name, "last_message_from_me", last_message.get("fromMe"))
+
+        # Totales
+        total_messages = chat_data.get("totalMessages")
+        if total_messages is None:
+            total_messages = chat_data.get("messageCount")
+        if total_messages is not None:
+            frappe.db.set_value("WhatsApp Conversation", conversation.name, "total_messages", total_messages)
 
         frappe.db.commit()
     except:
@@ -391,6 +555,14 @@ def get_conversations(session_id: str = None, limit: int = 50, offset: int = 0) 
                 }
             session_id = sessions[0].name
             frappe.log_error(f"Using session: {session_id}")
+
+        # Sincronizar antes de devolver resultados para asegurar datos frescos
+        try:
+            sync_result = sync_conversations(session_name=session_id)
+            if isinstance(sync_result, dict) and not sync_result.get("success", True):
+                frappe.log_error(f"Auto sync from get_conversations returned error: {sync_result}")
+        except Exception as sync_error:
+            frappe.log_error(f"Auto sync from get_conversations failed: {sync_error}")
 
         # Obtener conversaciones desde DocType
         conversations = frappe.get_all("WhatsApp Conversation",
@@ -533,4 +705,3 @@ def get_conversations(session_id: str = None, limit: int = 50, offset: int = 0) 
             "conversations": [],
             "total": 0
         }
-

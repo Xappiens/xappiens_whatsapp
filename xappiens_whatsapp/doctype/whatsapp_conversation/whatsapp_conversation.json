@@ -11,10 +11,12 @@
   "session",
   "chat_id",
   "contact",
+  "last_remote_message_id",
   "column_break_2",
   "contact_name",
   "phone_number",
   "status",
+  "last_synced_at",
   "section_break_type",
   "is_group",
   "group",
@@ -352,6 +354,16 @@
    "fieldname": "notes",
    "fieldtype": "Text Editor",
    "label": "Notas"
+  },
+  {
+   "fieldname": "last_synced_at",
+   "fieldtype": "Datetime",
+   "label": "Last Synced at"
+  },
+  {
+   "fieldname": "last_remote_message_id",
+   "fieldtype": "Data",
+   "label": "Last Remote Message Id"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -361,7 +373,7 @@
    "link_fieldname": "conversation"
   }
  ],
- "modified": "2025-10-04 20:03:33.176082",
+ "modified": "2025-10-17 05:25:30.723601",
  "modified_by": "Administrator",
  "module": "Xappiens Whatsapp",
  "name": "WhatsApp Conversation",

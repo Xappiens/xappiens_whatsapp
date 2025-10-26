@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "format:WAMEDIA-{#####}",
- "creation": "2025-10-03 10:00:00.000000",
+ "creation": "2025-10-04 17:59:19.586911",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -14,6 +14,8 @@
   "column_break_2",
   "media_type",
   "status",
+  "remote_media_id",
+  "sha256_hash",
   "section_break_file",
   "file",
   "filename",
@@ -46,7 +48,7 @@
   {
    "fieldname": "section_break_1",
    "fieldtype": "Section Break",
-   "label": "Información Básica"
+   "label": "Informaci\u00f3n B\u00e1sica"
   },
   {
    "fieldname": "message",
@@ -61,14 +63,14 @@
    "fieldname": "session",
    "fieldtype": "Link",
    "in_standard_filter": 1,
-   "label": "Sesión",
+   "label": "Sesi\u00f3n",
    "options": "WhatsApp Session",
    "reqd": 1
   },
   {
    "fieldname": "conversation",
    "fieldtype": "Link",
-   "label": "Conversación",
+   "label": "Conversaci\u00f3n",
    "options": "WhatsApp Conversation"
   },
   {
@@ -85,12 +87,12 @@
    "reqd": 1
   },
   {
+   "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Estado",
-   "options": "Pending\nDownloading\nDownloaded\nFailed",
-   "default": "Pending"
+   "options": "Pending\nDownloading\nDownloaded\nFailed"
   },
   {
    "fieldname": "section_break_file",
@@ -120,7 +122,7 @@
   {
    "fieldname": "filesize",
    "fieldtype": "Int",
-   "label": "Tamaño (bytes)"
+   "label": "Tama\u00f1o (bytes)"
   },
   {
    "fieldname": "mimetype",
@@ -130,7 +132,7 @@
   {
    "fieldname": "file_extension",
    "fieldtype": "Data",
-   "label": "Extensión"
+   "label": "Extensi\u00f3n"
   },
   {
    "fieldname": "section_break_preview",
@@ -152,17 +154,17 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "Para audio/video",
    "fieldname": "duration",
    "fieldtype": "Float",
-   "label": "Duración (segundos)",
-   "precision": 2,
-   "description": "Para audio/video"
+   "label": "Duraci\u00f3n (segundos)",
+   "precision": "2"
   },
   {
+   "description": "Para im\u00e1genes/videos (ej: 1920x1080)",
    "fieldname": "dimensions",
    "fieldtype": "Data",
-   "label": "Dimensiones",
-   "description": "Para imágenes/videos (ej: 1920x1080)"
+   "label": "Dimensiones"
   },
   {
    "fieldname": "section_break_download",
@@ -175,11 +177,11 @@
    "label": "URL de Descarga"
   },
   {
+   "default": "0",
    "fieldname": "is_downloaded",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Descargado",
-   "default": 0
+   "label": "Descargado"
   },
   {
    "fieldname": "downloaded_at",
@@ -196,10 +198,10 @@
    "label": "Error de Descarga"
   },
   {
+   "default": "0",
    "fieldname": "retry_count",
    "fieldtype": "Int",
-   "label": "Intentos de Descarga",
-   "default": 0
+   "label": "Intentos de Descarga"
   },
   {
    "fieldname": "section_break_metadata",
@@ -229,17 +231,23 @@
    "fieldname": "raw_data",
    "fieldtype": "JSON",
    "label": "Datos Crudos de WhatsApp"
+  },
+  {
+   "fieldname": "remote_media_id",
+   "fieldtype": "Data",
+   "label": "Remote Media Id",
+   "length": 260
+  },
+  {
+   "fieldname": "sha256_hash",
+   "fieldtype": "Data",
+   "label": "Sha256 Hash",
+   "length": 500
   }
  ],
  "index_web_pages_for_search": 1,
- "indexes": [
-  "message unique",
-  "session,media_type",
-  "session,is_downloaded",
-  "conversation"
- ],
  "links": [],
- "modified": "2025-10-03 10:00:00.000000",
+ "modified": "2025-10-17 05:28:54.921379",
  "modified_by": "Administrator",
  "module": "Xappiens Whatsapp",
  "name": "WhatsApp Media File",
@@ -285,4 +293,3 @@
  "states": [],
  "title_field": "filename"
 }
-

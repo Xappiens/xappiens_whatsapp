@@ -61,13 +61,29 @@ class WhatsAppSession(Document):
 
 	@frappe.whitelist()
 	def sync_all_data(self):
-		"""Sincroniza todos los datos de la sesión"""
+		"""Sincroniza todos los datos de la sesión (contactos, conversaciones, mensajes)"""
 		try:
-			frappe.msgprint("Sincronizando datos de la sesión...")
-			return {"success": True, "message": "Sincronización iniciada"}
+			if not self.is_connected:
+				frappe.throw("La sesión no está conectada. Por favor, conecta la sesión primero.")
+
+			# Ejecutar sincronización completa en background
+			frappe.enqueue(
+				"xappiens_whatsapp.api.sync.sync_session_complete",
+				queue="default",
+				timeout=600,
+				session_name=self.name
+			)
+
+			frappe.msgprint(
+				"Sincronización completa iniciada en segundo plano. Se sincronizarán contactos, conversaciones y mensajes.",
+				title="Sincronización Iniciada",
+				indicator="blue"
+			)
+
+			return {"success": True, "message": "Sincronización completa iniciada"}
 		except Exception as e:
 			frappe.log_error(f"Error syncing all data: {str(e)}", "WhatsApp Session Sync All")
-			return {"success": False, "error": str(e)}
+			frappe.throw(f"Error al iniciar sincronización: {str(e)}")
 
 	@frappe.whitelist()
 	def sync_contacts(self):
