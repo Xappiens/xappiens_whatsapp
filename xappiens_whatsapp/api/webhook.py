@@ -177,24 +177,51 @@ def _handle_message_received(data: Dict) -> Dict[str, Any]:
     """
     Procesa un mensaje recibido.
 
+    Formato esperado de Baileys:
+    {
+        "event": "message.received",
+        "data": {
+            "sessionId": "grupo_atu_mhomrgbz_4wk5bw",
+            "session_db_id": 123,
+            "message": {
+                "whatsappMessageId": "3A1FAB304FEA0BE9EC18",
+                "content": "Hola61",
+                "chatId": "34657032985@s.whatsapp.net",
+                "from": "34657032985@s.whatsapp.net",
+                "to": "34671499087",
+                "timestamp": 1762518118,
+                "type": "text"
+            }
+        }
+    }
+
     Args:
-        data: Datos del mensaje
+        data: Datos del mensaje (ya es data.data del webhook original)
 
     Returns:
         Dict con resultado
     """
     try:
+        # Log del payload recibido para debugging
+        frappe.log_error(f"📨 Webhook recibido - data completo: {frappe.as_json(data)}", "WhatsApp Webhook Debug")
+
         session_id = data.get("sessionId")
 
+        # Extraer message_data - el formato nuevo tiene data.message
         message_data = data.get("message") or data.get("payload") or data
 
-        # Buscar sesión
+        if not message_data:
+            frappe.log_error(f"⚠️ No se encontró message_data en el payload: {frappe.as_json(data)}", "WhatsApp Webhook Error")
+            return {"processed": False, "error": "Message data missing"}
+
+        # Buscar sesión por session_id
         session = frappe.db.get_value("WhatsApp Session", {"session_id": session_id}, "name")
 
         if not session:
-            return {"processed": False, "error": "Session not found"}
+            frappe.log_error(f"⚠️ Sesión no encontrada para session_id: {session_id}", "WhatsApp Webhook Error")
+            return {"processed": False, "error": f"Session not found: {session_id}"}
 
-        # Extraer datos del mensaje
+        # Extraer datos del mensaje según formato de Baileys
         message_id = (
             message_data.get("whatsappMessageId")
             or message_data.get("messageId")
@@ -206,6 +233,7 @@ def _handle_message_received(data: Dict) -> Dict[str, Any]:
             or message_data.get("jid")
         )
         if not chat_id:
+            frappe.log_error(f"⚠️ Chat ID faltante en mensaje: {frappe.as_json(message_data)}", "WhatsApp Webhook Error")
             return {"processed": False, "error": "Chat ID missing"}
 
         content = (
@@ -216,14 +244,45 @@ def _handle_message_received(data: Dict) -> Dict[str, Any]:
             or message_data.get("caption")
             or ""
         )
-        from_number = (
+
+        # Extraer número del remitente (from)
+        from_number_raw = (
             message_data.get("from")
             or message_data.get("sender")
             or message_data.get("participant")
             or message_data.get("author")
         )
+
+        # Normalizar from_number: extraer solo el número sin @s.whatsapp.net
+        if from_number_raw:
+            from_number = from_number_raw.replace("@s.whatsapp.net", "").replace("@c.us", "").replace("+", "").strip()
+        else:
+            # Si no hay from, usar chatId
+            from_number = chat_id.replace("@s.whatsapp.net", "").replace("@c.us", "").replace("+", "").strip()
+
+        # Extraer número de destino (to) - este es el número de la sesión que recibe
+        to_number_raw = message_data.get("to")
+        to_number = None
+        if to_number_raw:
+            to_number = to_number_raw.replace("+", "").replace(" ", "").strip()
+
         timestamp = message_data.get("timestamp") or data.get("timestamp")
+
+        # Detectar from_me: comparar con número de sesión
+        # Si el mensaje viene de la sesión misma, es saliente (from_me = True)
+        # Si viene de otro número, es entrante (from_me = False)
         from_me = bool(message_data.get("fromMe"))
+        if not from_me and to_number:
+            # Comparar el número de destino (to) con el número de la sesión
+            session_doc = frappe.get_doc("WhatsApp Session", session)
+            session_phone = session_doc.phone_number or ""
+            # Normalizar números para comparar
+            session_phone_normalized = session_phone.replace("+", "").replace(" ", "").strip()
+            # Si el mensaje va "to" la sesión, entonces from != session, así que from_me = False
+            # Si el mensaje viene "from" la sesión, entonces from == session, así que from_me = True
+            if session_phone_normalized and from_number:
+                # Si el remitente es la sesión misma, es saliente
+                from_me = session_phone_normalized == from_number
 
         # Verificar si el mensaje ya existe
         if message_id and frappe.db.exists("WhatsApp Message", {"session": session, "message_id": message_id}):
@@ -288,6 +347,50 @@ def _handle_message_received(data: Dict) -> Dict[str, Any]:
             "has_media": message_data.get("has_attachment", False),
             "is_read": False
         })
+
+        # Procesar archivos multimedia si los hay
+        if message_data.get("has_attachment") or message_data.get("hasMedia"):
+            try:
+                from .messages import process_media_items
+
+                # Extraer información de medios del webhook
+                media_list = []
+
+                # Buscar datos de media en diferentes formatos
+                media_info = (
+                    message_data.get("media") or
+                    message_data.get("attachment") or
+                    message_data.get("mediaData") or
+                    {}
+                )
+
+                if media_info:
+                    media_item = {
+                        "media_type": _get_media_type_from_message_type(message_data.get("type", "document")),
+                        "filename": media_info.get("filename") or f"media_{message_id}",
+                        "filesize": media_info.get("filesize") or media_info.get("size"),
+                        "mimetype": media_info.get("mimetype") or media_info.get("mimeType"),
+                        "url": media_info.get("url") or media_info.get("media_url"),
+                        "remote_media_id": media_info.get("mediaKey") or media_info.get("id"),
+                        "media_hash": media_info.get("fileSha256") or media_info.get("hash")
+                    }
+                    media_list.append(media_item)
+
+                if media_list:
+                    process_media_items(message_doc, media_list)
+
+                    # Programar descarga automática en background
+                    frappe.enqueue(
+                        "xappiens_whatsapp.api.media.download_media_from_message",
+                        session=session,
+                        message=message_doc.name,
+                        queue="default",
+                        timeout=300
+                    )
+
+            except Exception as e:
+                frappe.log_error(f"Error processing media in webhook: {str(e)}", "WhatsApp Webhook Media")
+
         message_doc.insert(ignore_permissions=True)
 
         # Actualizar conversación
@@ -301,20 +404,84 @@ def _handle_message_received(data: Dict) -> Dict[str, Any]:
             "unread_count": new_unread_count
         })
 
+        # Obtener número de teléfono normalizado para el frontend
+        # Para mensajes entrantes, el phone_number es el remitente (from)
+        # Para mensajes salientes, el phone_number es el destinatario (to)
+        conversation_doc = frappe.get_doc("WhatsApp Conversation", conversation)
+        phone_number_normalized = conversation_doc.phone_number or from_number
+
+        # El to_number ya lo tenemos del message_data
+        # Si no está disponible, usar el número de la sesión para mensajes entrantes
+        if not to_number:
+            if from_me:
+                # Mensaje saliente: el destino es el chat_id (remitente del mensaje entrante)
+                to_number = chat_id.split('@')[0] if '@' in chat_id else chat_id
+            else:
+                # Mensaje entrante: el destino es el número de la sesión
+                session_doc = frappe.get_doc("WhatsApp Session", session)
+                to_number = session_doc.phone_number or ""
+                if to_number:
+                    to_number = to_number.replace("+", "").replace(" ", "").strip()
+
+        # Preparar información de media para el payload
+        media_payload = None
+        if message_data.get("has_attachment") or message_data.get("hasMedia"):
+            media_info = (
+                message_data.get("media") or
+                message_data.get("attachment") or
+                message_data.get("mediaData") or
+                {}
+            )
+            if media_info:
+                media_payload = {
+                    "filename": media_info.get("filename"),
+                    "filesize": media_info.get("filesize") or media_info.get("size"),
+                    "mimetype": media_info.get("mimetype") or media_info.get("mimeType"),
+                    "url": media_info.get("url") or media_info.get("media_url"),
+                    "media_type": _get_media_type_from_message_type(message_data.get("type", "document"))
+                }
+
+        # Preparar payload para tiempo real - formato optimizado para el frontend
         payload = {
             "session": session,
+            "session_id": session_id,  # session_id string de Baileys
             "conversation": conversation,
             "conversation_id": conversation,
-            "message_id": message_doc.name,
+            "message_id": message_doc.name,  # ID del documento en Frappe
+            "whatsapp_message_id": message_id,  # ID de WhatsApp (whatsappMessageId)
             "message": content,
             "content": content,
-            "from": from_number,
-            "direction": "outgoing" if from_me else "incoming",
+            "from": from_number,  # Número del remitente normalizado
+            "from_number": from_number,  # Alias para compatibilidad
+            "to": to_number,  # Número de destino (sesión para entrantes)
+            "phone_number": phone_number_normalized,  # Número normalizado para identificar contacto en frontend
+            "chat_id": chat_id,  # Chat ID completo con @s.whatsapp.net
+            "direction": "outgoing" if from_me else "incoming",  # Dirección del mensaje
             "timestamp": timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp),
+            "message_type": message_data.get("type", "text"),
+            "has_media": message_data.get("has_attachment", False) or message_data.get("hasMedia", False),
+            "status": "Sent" if from_me else "Delivered",
+            "media": media_payload  # Información de media si existe
         }
 
-        frappe.publish_realtime("whatsapp_message", payload, user="*")
-        frappe.publish_realtime("whatsapp_message_received", payload, user="*")
+        # Log del payload que se va a publicar
+        frappe.log_error(f"📤 Publicando evento realtime - payload: {frappe.as_json(payload)}", "WhatsApp Webhook Realtime")
+
+        # Publicar eventos realtime para que el frontend los reciba
+        # Cuando no se especifica user ni room, Frappe usa get_site_room() que es "all"
+        # Los System Users se unen automáticamente al room "all" al conectarse
+        try:
+            # Publicar sin user ni room para que vaya a todos los usuarios del sitio
+            frappe.publish_realtime("whatsapp_message", payload)
+            frappe.publish_realtime("whatsapp_message_received", payload)
+
+            frappe.log_error(f"✅ Eventos publicados correctamente", "WhatsApp Webhook Realtime")
+        except Exception as e:
+            frappe.log_error(f"Error publicando eventos realtime: {str(e)}", "WhatsApp Webhook Realtime Error")
+            import traceback
+            frappe.log_error(f"Traceback: {traceback.format_exc()}", "WhatsApp Webhook Realtime Error")
+
+        frappe.log_error(f"✅ Mensaje procesado y publicado en tiempo real - Message ID: {message_doc.name}, From: {from_number}, To: {to_number}", "WhatsApp Webhook Success")
 
         return {"processed": True, "action": "created", "message_id": message_doc.name}
 
@@ -626,3 +793,25 @@ def _handle_chat_update(data: Dict) -> Dict[str, Any]:
     except Exception as e:
         frappe.log_error(f"Error handling chat update: {str(e)}")
         return {"processed": False, "error": str(e)}
+
+
+def _get_media_type_from_message_type(message_type: str) -> str:
+    """
+    Mapea el tipo de mensaje de WhatsApp al tipo de media de Frappe.
+
+    Args:
+        message_type: Tipo de mensaje de WhatsApp
+
+    Returns:
+        Tipo de media para Frappe
+    """
+    type_map = {
+        "image": "image",
+        "video": "video",
+        "audio": "audio",
+        "ptt": "voice",
+        "document": "document",
+        "sticker": "sticker"
+    }
+
+    return type_map.get(message_type, "document")
