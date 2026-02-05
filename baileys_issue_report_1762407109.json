@@ -1,0 +1,126 @@
+{
+  "issue_summary": "Error 500 'CONNECTION_ERROR' al intentar conectar sesiones WhatsApp",
+  "severity": "HIGH - Impide el uso normal del servicio",
+  "affected_endpoint": "/api/sessions/{id}/connect",
+  "error_details": {
+    "status_code": 500,
+    "error_code": "CONNECTION_ERROR",
+    "error_message": "Error conectando sesión",
+    "diagnosis": "Error interno del servidor Baileys al inicializar conexión WhatsApp",
+    "likely_cause": "Problema con el proceso de inicialización de Baileys o configuración incorrecta"
+  },
+  "environment": {
+    "server_url": "https://api.inbox-hub.com",
+    "api_key": "prod_whatsapp_api_31...",
+    "timestamp": "2025-11-06T06:31:48.623043"
+  },
+  "reproduction_steps": [
+    "1. Crear nueva sesión usando POST /api/sessions",
+    "2. Intentar conectar usando POST /api/sessions/{id}/connect",
+    "3. Servidor devuelve 500 con error 'CONNECTION_ERROR'"
+  ],
+  "technical_analysis": {
+    "timestamp": "2025-11-06T06:31:48.623043",
+    "server_url": "https://api.inbox-hub.com",
+    "api_key": "prod_whatsapp_api_31...",
+    "tests": [
+      {
+        "test": "health_check",
+        "status_code": 200,
+        "response": {
+          "success": true,
+          "message": "API funcionando correctamente",
+          "timestamp": "2025-11-06T05:31:48.671Z",
+          "version": "1.0.0",
+          "environment": "production"
+        },
+        "success": true
+      },
+      {
+        "test": "authentication",
+        "status_code": 200,
+        "success": true,
+        "sessions_count": 10
+      },
+      {
+        "test": "session_creation",
+        "status_code": 201,
+        "request_data": {
+          "sessionId": "analysis_session_1762407108",
+          "sessionName": "Análisis Técnico 1762407108",
+          "fromFrappe": true
+        },
+        "success": true,
+        "session_id": 61,
+        "session_name": "analysis_session_1762407108",
+        "initial_status": "disconnected"
+      },
+      {
+        "test": "session_connection",
+        "session_id": 61,
+        "url": "https://api.inbox-hub.com/api/sessions/61/connect",
+        "headers": {
+          "X-API-Key": "prod_whatsapp_api_315d76a7e515903648fdf3e9ecfd7fc43e8495fd29f3053fda7df0d766c97814",
+          "Content-Type": "application/json"
+        },
+        "request_body": {},
+        "status_code": 500,
+        "response_headers": {
+          "Server": "nginx/1.24.0 (Ubuntu)",
+          "Date": "Thu, 06 Nov 2025 05:31:48 GMT",
+          "Content-Type": "application/json; charset=utf-8",
+          "Content-Length": "117",
+          "Connection": "keep-alive",
+          "Content-Security-Policy": "default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self';img-src 'self' data: https:;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Origin-Agent-Cluster": "?1",
+          "Referrer-Policy": "no-referrer",
+          "Strict-Transport-Security": "max-age=15552000; includeSubDomains",
+          "X-Content-Type-Options": "nosniff",
+          "X-DNS-Prefetch-Control": "off",
+          "X-Download-Options": "noopen",
+          "X-Frame-Options": "SAMEORIGIN",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-XSS-Protection": "0",
+          "Vary": "Origin",
+          "Access-Control-Allow-Credentials": "true",
+          "RateLimit-Policy": "1000;w=900",
+          "RateLimit-Limit": "1000",
+          "RateLimit-Remaining": "995",
+          "RateLimit-Reset": "884",
+          "X-RateLimit-Limit": "30",
+          "X-RateLimit-Remaining": "26",
+          "X-RateLimit-Reset": "1762407138",
+          "ETag": "W/\"75-sm70FmDz8CETcJiGBwi2O+y4j8o\""
+        },
+        "success": false,
+        "response_body": {
+          "success": false,
+          "error": "Error conectando sesión",
+          "code": "CONNECTION_ERROR",
+          "timestamp": "2025-11-06T05:31:48.924Z"
+        },
+        "issue_confirmed": true,
+        "issue_type": "INTERNAL_SERVER_ERROR",
+        "error_code": "CONNECTION_ERROR",
+        "error_message": "Error conectando sesión",
+        "diagnosis": "Error interno del servidor Baileys al inicializar conexión WhatsApp",
+        "likely_cause": "Problema con el proceso de inicialización de Baileys o configuración incorrecta"
+      },
+      {
+        "test": "qr_generation",
+        "session_id": 61,
+        "status_code": 500,
+        "success": false,
+        "response_body": {
+          "success": false,
+          "error": "Error obteniendo código QR",
+          "code": "QR_GENERATION_ERROR",
+          "timestamp": "2025-11-06T05:31:48.993Z"
+        },
+        "related_to_connection_issue": true
+      }
+    ]
+  }
+}

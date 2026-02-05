@@ -34,6 +34,7 @@
   "session_status",
   "section_break_webhook",
   "webhook_enabled",
+  "webhook_url",
   "webhook_secret",
   "webhook_events",
   "column_break_webhook",
@@ -235,6 +236,13 @@
    "fieldname": "webhook_enabled",
    "fieldtype": "Check",
    "label": "Webhooks Habilitados"
+  },
+  {
+   "description": "URL completa donde Inbox Hub debe enviar los webhooks",
+   "fieldname": "webhook_url",
+   "fieldtype": "Data",
+   "label": "URL del Webhook",
+   "read_only": 1
   },
   {
    "fieldname": "webhook_secret",

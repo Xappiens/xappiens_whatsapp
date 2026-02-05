@@ -64,6 +64,26 @@ def handle_webhook():
         if not isinstance(event_data, dict):
             event_data = {}
 
+        # Verificar si es una reacción ANTES de enrutar
+        # Las reacciones pueden venir en data.message.reactionMessage o event_data.reactionMessage
+        reaction_message = (
+            event_data.get("reactionMessage") or
+            (data.get("message") or {}).get("reactionMessage") or
+            data.get("reactionMessage")
+        )
+
+        if reaction_message:
+            # Si es una reacción, procesarla directamente
+            resolved_session = (
+                header_session
+                or data.get("sessionId")
+                or event_data.get("sessionId")
+            )
+            if resolved_session:
+                event_data.setdefault("sessionId", resolved_session)
+                data["sessionId"] = resolved_session
+            return _handle_reaction_received(event_data if event_data.get("sessionId") else data, resolved_session or data.get("sessionId"))
+
         # Asegurar sessionId disponible para handlers
         resolved_session = (
             header_session
@@ -206,6 +226,31 @@ def _handle_message_received(data: Dict) -> Dict[str, Any]:
         frappe.log_error(f"📨 Webhook recibido - data completo: {frappe.as_json(data)}", "WhatsApp Webhook Debug")
 
         session_id = data.get("sessionId")
+
+        # Verificar si es una reacción antes de procesar como mensaje normal
+        # Las reacciones pueden venir en diferentes formatos según el ejemplo del usuario:
+        # Formato real: data.message.reactionMessage (dentro del objeto message)
+        # También puede venir como: data.reactionMessage
+        reaction_message = None
+
+        # Primero buscar en data.message.reactionMessage (formato más común)
+        message_obj = data.get("message")
+        if isinstance(message_obj, dict):
+            reaction_message = message_obj.get("reactionMessage")
+
+        # Si no está ahí, buscar directamente en data
+        if not reaction_message:
+            reaction_message = data.get("reactionMessage")
+
+        # Si aún no lo encontramos, buscar en message_data extraído
+        if not reaction_message:
+            message_data_temp = data.get("message") or data.get("payload") or data
+            if isinstance(message_data_temp, dict):
+                reaction_message = message_data_temp.get("reactionMessage")
+
+        if reaction_message:
+            frappe.log_error(f"🎯 Reacción detectada en _handle_message_received: {frappe.as_json(reaction_message)}", "WhatsApp Webhook Reaction Detection")
+            return _handle_reaction_received(data, session_id)
 
         # Extraer message_data - el formato nuevo tiene data.message
         message_data = data.get("message") or data.get("payload") or data
@@ -487,6 +532,219 @@ def _handle_message_received(data: Dict) -> Dict[str, Any]:
 
     except Exception as e:
         frappe.log_error(f"Error handling message received: {str(e)}")
+        return {"processed": False, "error": str(e)}
+
+
+def _handle_reaction_received(data: Dict, session_id: str) -> Dict[str, Any]:
+    """
+    Procesa una reacción recibida a un mensaje existente.
+
+    Formato esperado de Baileys:
+    {
+        "event": "message.received",
+        "data": {
+            "sessionId": "grupo_atu_mhomrgbz_4wk5bw",
+            "reactionMessage": {
+                "key": {
+                    "remoteJid": "34657032985@s.whatsapp.net",
+                    "fromMe": false,
+                    "id": "3AA45481DBB4FC7B4CFC"  // ID del mensaje original
+                },
+                "text": "👍",  // Emoji de la reacción
+                "senderTimestampMs": "1762518864027"
+            }
+        }
+    }
+
+    Args:
+        data: Datos del webhook completo
+        session_id: ID de la sesión
+
+    Returns:
+        Dict con resultado
+    """
+    try:
+        frappe.log_error(f"🎯 Reacción recibida - data completo: {frappe.as_json(data)}", "WhatsApp Webhook Reaction")
+
+        # Extraer reactionMessage del payload
+        # Puede venir en diferentes ubicaciones:
+        # 1. data.reactionMessage
+        # 2. data.message.reactionMessage (formato más común según el ejemplo del usuario)
+        reaction_message = (
+            data.get("reactionMessage") or
+            (data.get("message") or {}).get("reactionMessage")
+        )
+
+        # Si aún no lo encontramos, intentar extraer message_data y buscar ahí
+        if not reaction_message:
+            message_data = data.get("message") or data.get("payload") or data
+            if isinstance(message_data, dict):
+                reaction_message = message_data.get("reactionMessage")
+
+        if not reaction_message:
+            frappe.log_error(f"⚠️ No se encontró reactionMessage en el payload: {frappe.as_json(data)}", "WhatsApp Webhook Reaction Error")
+            return {"processed": False, "error": "Reaction message data missing"}
+
+        # Extraer datos de la reacción
+        reaction_key = reaction_message.get("key", {})
+        original_message_id = reaction_key.get("id")
+        reaction_emoji = reaction_message.get("text") or reaction_message.get("reaction")
+        sender_timestamp_ms = reaction_message.get("senderTimestampMs")
+        from_me = bool(reaction_key.get("fromMe", False))
+        remote_jid = reaction_key.get("remoteJid", "")
+
+        if not original_message_id:
+            frappe.log_error(f"⚠️ ID del mensaje original faltante en reacción: {frappe.as_json(reaction_message)}", "WhatsApp Webhook Reaction Error")
+            return {"processed": False, "error": "Original message ID missing"}
+
+        if not reaction_emoji:
+            frappe.log_error(f"⚠️ Emoji de reacción faltante: {frappe.as_json(reaction_message)}", "WhatsApp Webhook Reaction Error")
+            return {"processed": False, "error": "Reaction emoji missing"}
+
+        # Buscar sesión
+        session = frappe.db.get_value("WhatsApp Session", {"session_id": session_id}, "name")
+        if not session:
+            frappe.log_error(f"⚠️ Sesión no encontrada para session_id: {session_id}", "WhatsApp Webhook Reaction Error")
+            return {"processed": False, "error": f"Session not found: {session_id}"}
+
+        # Buscar el mensaje original por message_id
+        original_message = frappe.db.get_value("WhatsApp Message", {
+            "session": session,
+            "message_id": original_message_id
+        }, "name")
+
+        if not original_message:
+            frappe.log_error(f"⚠️ Mensaje original no encontrado para message_id: {original_message_id}", "WhatsApp Webhook Reaction Error")
+            return {"processed": False, "error": f"Original message not found: {original_message_id}"}
+
+        # Obtener el documento del mensaje original
+        message_doc = frappe.get_doc("WhatsApp Message", original_message)
+
+        # Normalizar número del remitente de la reacción
+        reacted_by_number = remote_jid.replace("@s.whatsapp.net", "").replace("@c.us", "").replace("+", "").strip()
+
+        # Si from_me es True, obtener el número de la sesión
+        if from_me:
+            session_doc = frappe.get_doc("WhatsApp Session", session)
+            reacted_by_number = session_doc.phone_number or ""
+            if reacted_by_number:
+                reacted_by_number = reacted_by_number.replace("+", "").replace(" ", "").strip()
+
+        # Normalizar timestamp
+        if sender_timestamp_ms:
+            try:
+                ts_value = int(sender_timestamp_ms)
+                if ts_value > 1e12:  # milisegundos
+                    reacted_at = datetime.fromtimestamp(ts_value / 1000)
+                else:
+                    reacted_at = datetime.fromtimestamp(ts_value)
+            except Exception:
+                reacted_at = frappe.utils.now_datetime()
+        else:
+            reacted_at = frappe.utils.now_datetime()
+
+        # Buscar si ya existe una reacción de este usuario para este mensaje
+        existing_reaction = None
+        if message_doc.reactions:
+            for reaction in message_doc.reactions:
+                if reaction.reacted_by_number == reacted_by_number:
+                    existing_reaction = reaction
+                    break
+
+        # Si existe, actualizar; si no, crear nueva
+        if existing_reaction:
+            # Si el emoji está vacío o es null, eliminar la reacción
+            if not reaction_emoji or reaction_emoji.strip() == "":
+                message_doc.remove(existing_reaction)
+                frappe.log_error(f"🗑️ Reacción eliminada por usuario {reacted_by_number} del mensaje {original_message}", "WhatsApp Webhook Reaction")
+            else:
+                existing_reaction.reaction_emoji = reaction_emoji
+                existing_reaction.reacted_at = reacted_at
+                existing_reaction.is_from_me = from_me
+                frappe.log_error(f"🔄 Reacción actualizada por usuario {reacted_by_number}: {reaction_emoji}", "WhatsApp Webhook Reaction")
+        else:
+            # Solo crear si hay emoji
+            if reaction_emoji and reaction_emoji.strip() != "":
+                # Buscar nombre del contacto si existe
+                reacted_by_name = None
+                if reacted_by_number:
+                    contact = frappe.db.get_value("WhatsApp Contact", {
+                        "session": session,
+                        "phone_number": reacted_by_number
+                    }, "contact_name")
+                    reacted_by_name = contact
+
+                message_doc.append("reactions", {
+                    "reaction_emoji": reaction_emoji,
+                    "reacted_by_number": reacted_by_number,
+                    "reacted_by_name": reacted_by_name,
+                    "reacted_at": reacted_at,
+                    "is_from_me": from_me
+                })
+                frappe.log_error(f"➕ Nueva reacción agregada por usuario {reacted_by_number}: {reaction_emoji}", "WhatsApp Webhook Reaction")
+
+        # Actualizar has_reaction si hay reacciones
+        message_doc.has_reaction = 1 if message_doc.reactions else 0
+        if message_doc.reactions and len(message_doc.reactions) > 0:
+            # Mantener compatibilidad con campos antiguos (última reacción)
+            last_reaction = message_doc.reactions[-1]
+            message_doc.reaction = last_reaction.reaction_emoji
+            message_doc.reacted_at = last_reaction.reacted_at
+
+        message_doc.save(ignore_permissions=True)
+
+        # Obtener conversación para el payload
+        conversation = message_doc.conversation
+
+        # Preparar payload para tiempo real
+        reactions_list = []
+        if message_doc.reactions:
+            for reaction in message_doc.reactions:
+                reactions_list.append({
+                    "emoji": reaction.reaction_emoji,
+                    "reacted_by_number": reaction.reacted_by_number,
+                    "reacted_by_name": reaction.reacted_by_name,
+                    "reacted_at": reaction.reacted_at.isoformat() if hasattr(reaction.reacted_at, "isoformat") else str(reaction.reacted_at),
+                    "is_from_me": reaction.is_from_me
+                })
+
+        payload = {
+            "session": session,
+            "session_id": session_id,
+            "conversation": conversation,
+            "conversation_id": conversation,
+            "message_id": original_message,  # ID del mensaje original en Frappe
+            "whatsapp_message_id": original_message_id,  # ID de WhatsApp del mensaje original
+            "reaction_emoji": reaction_emoji,
+            "reacted_by_number": reacted_by_number,
+            "reacted_by_name": reacted_by_name if not existing_reaction else existing_reaction.reacted_by_name,
+            "reacted_at": reacted_at.isoformat() if hasattr(reacted_at, "isoformat") else str(reacted_at),
+            "is_from_me": from_me,
+            "reactions": reactions_list,  # Lista completa de reacciones
+            "reaction_count": len(reactions_list) if reactions_list else 0
+        }
+
+        frappe.log_error(f"📤 Publicando evento realtime de reacción - payload: {frappe.as_json(payload)}", "WhatsApp Webhook Reaction Realtime")
+
+        # Publicar eventos realtime
+        try:
+            frappe.publish_realtime("whatsapp_reaction", payload)
+            frappe.publish_realtime("whatsapp_message_updated", payload)
+
+            frappe.log_error(f"✅ Eventos de reacción publicados correctamente", "WhatsApp Webhook Reaction Realtime")
+        except Exception as e:
+            frappe.log_error(f"Error publicando eventos realtime de reacción: {str(e)}", "WhatsApp Webhook Reaction Realtime Error")
+            import traceback
+            frappe.log_error(f"Traceback: {traceback.format_exc()}", "WhatsApp Webhook Reaction Realtime Error")
+
+        frappe.log_error(f"✅ Reacción procesada exitosamente - Message ID: {original_message}, Reaction: {reaction_emoji}, By: {reacted_by_number}", "WhatsApp Webhook Reaction Success")
+
+        return {"processed": True, "action": "reaction_added" if not existing_reaction else "reaction_updated", "message_id": original_message}
+
+    except Exception as e:
+        frappe.log_error(f"Error handling reaction received: {str(e)}", "WhatsApp Webhook Reaction Error")
+        import traceback
+        frappe.log_error(f"Traceback: {traceback.format_exc()}", "WhatsApp Webhook Reaction Error")
         return {"processed": False, "error": str(e)}
 
 

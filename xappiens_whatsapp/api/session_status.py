@@ -152,10 +152,31 @@ def get_session_status(session_name: Optional[str] = None, session_id: Optional[
         if last_activity:
             try:
                 from datetime import datetime
-                dt = datetime.fromisoformat(str(last_activity).replace("Z", "+00:00"))
-                session_doc.last_seen = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except Exception:
-                session_doc.last_seen = last_activity
+                # Parsear fecha ISO 8601
+                if isinstance(last_activity, str):
+                    # Reemplazar Z por +00:00 para compatibilidad con fromisoformat
+                    if last_activity.endswith('Z'):
+                        last_activity = last_activity.replace('Z', '+00:00')
+                    parsed_datetime = datetime.fromisoformat(last_activity)
+                else:
+                    parsed_datetime = last_activity
+
+                # Convertir a naive datetime (sin timezone) para MySQL
+                # Si tiene timezone, convertir a UTC y luego quitar timezone info
+                if parsed_datetime.tzinfo is not None:
+                    # Convertir a UTC y hacer naive
+                    parsed_datetime = parsed_datetime.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+
+                # Usar get_datetime de Frappe para asegurar formato correcto
+                import frappe
+                session_doc.last_seen = frappe.utils.get_datetime(parsed_datetime)
+            except Exception as e:
+                import frappe
+                frappe.log_error(
+                    f"Error parseando lastActivity '{last_activity}': {str(e)}",
+                    "WhatsApp Session Status Date Parse Error"
+                )
+                # Si falla el parsing, no actualizar last_seen
 
         session_doc.save(ignore_permissions=True)
         frappe.db.commit()

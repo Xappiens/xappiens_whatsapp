@@ -28,10 +28,10 @@ def get_api_credentials():
 
     return {
         "email": settings.api_email,
-        "password": settings.api_password,
+        "password": settings.get_password('api_password'),
         "user_id": settings.api_user_id,
         "organization_id": settings.organization_id,
-        "api_key": settings.api_key,
+        "api_key": settings.get_password('api_key'),
         "base_url": settings.api_base_url,
         "session_id": settings.session_id
     }

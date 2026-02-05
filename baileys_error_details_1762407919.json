@@ -1,0 +1,107 @@
+{
+  "report_type": "DETAILED_ERROR_ANALYSIS",
+  "generated_at": "2025-11-06T06:45:19.617135",
+  "client": "Grupo ATU",
+  "severity": "HIGH",
+  "error_details": {
+    "timestamp": "2025-11-06T06:45:19.484907",
+    "test_session": {
+      "id": 67,
+      "sessionId": "error_capture_1762407919",
+      "created_at": "2025-11-06T05:45:19.470Z"
+    },
+    "request": {
+      "method": "POST",
+      "url": "https://api.inbox-hub.com/api/sessions/67/connect",
+      "headers": {
+        "X-API-Key": "prod_whatsapp_api_315d76a7e515903648fdf3e9ecfd7fc43e8495fd29f3053fda7df0d766c97814",
+        "Content-Type": "application/json"
+      },
+      "body": {}
+    },
+    "response": {
+      "status_code": 500,
+      "headers": {
+        "Server": "nginx/1.24.0 (Ubuntu)",
+        "Date": "Thu, 06 Nov 2025 05:45:19 GMT",
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": "117",
+        "Connection": "keep-alive",
+        "Content-Security-Policy": "default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self';img-src 'self' data: https:;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Origin-Agent-Cluster": "?1",
+        "Referrer-Policy": "no-referrer",
+        "Strict-Transport-Security": "max-age=15552000; includeSubDomains",
+        "X-Content-Type-Options": "nosniff",
+        "X-DNS-Prefetch-Control": "off",
+        "X-Download-Options": "noopen",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "X-XSS-Protection": "0",
+        "Vary": "Origin",
+        "Access-Control-Allow-Credentials": "true",
+        "RateLimit-Policy": "1000;w=900",
+        "RateLimit-Limit": "1000",
+        "RateLimit-Remaining": "982",
+        "RateLimit-Reset": "779",
+        "X-RateLimit-Limit": "30",
+        "X-RateLimit-Remaining": "25",
+        "X-RateLimit-Reset": "1762407979",
+        "ETag": "W/\"75-zq34UZXqQJIuZhbdAmoBnifMpO0\""
+      },
+      "body": {
+        "success": false,
+        "error": "Error conectando sesión",
+        "code": "CONNECTION_ERROR",
+        "timestamp": "2025-11-06T05:45:19.610Z"
+      },
+      "elapsed_time": 0.130856
+    },
+    "server_info": {
+      "server": "nginx/1.24.0 (Ubuntu)",
+      "date": "Thu, 06 Nov 2025 05:45:19 GMT",
+      "content_type": "application/json; charset=utf-8",
+      "rate_limit_remaining": "982",
+      "rate_limit_reset": "779"
+    },
+    "analysis": {
+      "error_confirmed": true,
+      "error_type": "CONNECTION_ERROR",
+      "error_message": "Error conectando sesión",
+      "server_timestamp": "2025-11-06T05:45:19.610Z",
+      "consistent_with_previous": true,
+      "severity": "HIGH - Service blocking"
+    }
+  },
+  "technical_summary": {
+    "issue": "HTTP 500 CONNECTION_ERROR on session connect endpoint",
+    "endpoint": "/api/sessions/{id}/connect",
+    "method": "POST",
+    "authentication": "X-API-Key (working correctly)",
+    "reproducible": "100% - Every attempt fails",
+    "impact": "Complete service unavailability"
+  },
+  "for_baileys_team": {
+    "focus_areas": [
+      "Baileys library initialization process",
+      "WhatsApp Web configuration",
+      "Server resource allocation",
+      "Node.js process management",
+      "Error handling in connect endpoint"
+    ],
+    "debug_suggestions": [
+      "Enable detailed logging in connect endpoint",
+      "Check Baileys library version compatibility",
+      "Verify WhatsApp Web session management",
+      "Monitor server resources during connect attempts",
+      "Review recent changes to connection logic"
+    ],
+    "immediate_actions": [
+      "Check server logs at exact timestamp",
+      "Verify Baileys configuration",
+      "Test in development environment",
+      "Implement additional error logging"
+    ]
+  }
+}

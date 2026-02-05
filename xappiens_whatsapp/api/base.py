@@ -16,7 +16,7 @@ class WhatsAppAPIClient:
     """
     Cliente base para hacer requests al servidor de WhatsApp externo (Baileys/Inbox Hub).
     Lee la configuración de WhatsApp Settings.
-    Implementa autenticación JWT + API Key según documentación.
+    Usa solo API Key según nueva documentación simplificada.
     """
 
     def __init__(self, session_id: Optional[str] = None):
@@ -30,12 +30,13 @@ class WhatsAppAPIClient:
         self.settings = self._get_settings()
         self.base_url = self.settings.api_base_url
         self.api_key = self.settings.get_password("api_key")
-        self.email = self.settings.api_email
-        self.password = self.settings.get_password("api_password")
         self.timeout = self.settings.api_timeout or 30
         self.retry_attempts = self.settings.api_retry_attempts or 3
-        self.access_token = None
-        self.token_expiry = None
+        # Ya no se necesitan para autenticación JWT
+        # self.email = self.settings.api_email
+        # self.password = self.settings.get_password("api_password")
+        # self.access_token = None
+        # self.token_expiry = None
 
     def _get_settings(self) -> Any:
         """
@@ -59,59 +60,31 @@ class WhatsAppAPIClient:
 
     def _authenticate(self) -> str:
         """
-        Autentica con el servidor Baileys y obtiene JWT token.
-        Implementa cache de token para evitar autenticaciones innecesarias.
+        MÉTODO OBSOLETO - Ya no se necesita JWT según nueva documentación.
+        Solo se mantiene para compatibilidad, pero no se usa.
 
         Returns:
-            JWT access token
+            Empty string (no JWT needed)
         """
-        # Si tenemos un token válido, usarlo
-        if self.access_token and self.token_expiry and datetime.now() < self.token_expiry:
-            return self.access_token
-
-        # Realizar login
-        try:
-            response = requests.post(
-                f"{self.base_url}/api/auth/login",
-                json={
-                    "identifier": self.email,
-                    "password": self.password
-                },
-                headers={"Content-Type": "application/json"},
-                timeout=self.timeout
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("success") and data.get("data", {}).get("accessToken"):
-                    self.access_token = data["data"]["accessToken"]
-                    # Token válido por 24h, renovar 1h antes
-                    self.token_expiry = datetime.now() + timedelta(hours=23)
-                    return self.access_token
-
-            frappe.throw(f"Error de autenticación: {response.text}")
-
-        except requests.exceptions.RequestException as e:
-            frappe.throw(f"Error conectando al servidor de autenticación: {str(e)}")
+        # Ya no se necesita autenticación JWT
+        return ""
 
     def _get_headers(self) -> Dict[str, str]:
         """
         Construye los headers para las peticiones.
-        Incluye JWT token y API Key según documentación Baileys/Inbox Hub.
+        Solo usa API Key según nueva documentación simplificada.
 
         Returns:
             Dict con headers
         """
-        # Obtener token JWT
-        jwt_token = self._authenticate()
-
         headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {jwt_token}"
+            "Content-Type": "application/json"
         }
 
         if self.api_key:
             headers["X-API-Key"] = self.api_key
+        else:
+            frappe.throw("API Key no configurada en WhatsApp Settings")
 
         return headers
 
@@ -409,7 +382,7 @@ class WhatsAppAPIClient:
         if not self.session_id:
             frappe.throw("session_id es requerido para enviar mensajes")
 
-        # Endpoint según documentación: /api/messages/:sessionId/send
+        # Endpoint según documentación: /api/messages/{sessionId}/send
         return self.post(
             f"/api/messages/{self.session_id}/send",
             data={

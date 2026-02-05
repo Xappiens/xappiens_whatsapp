@@ -43,8 +43,18 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"WhatsApp Session" : "public/js/whatsapp_session.js"}
-doctype_list_js = {"WhatsApp Session" : "public/js/whatsapp_session.js"}
+doctype_js = {
+    "WhatsApp Session": [
+        "public/js/whatsapp_session.js",
+        "public/js/whatsapp_session_merge.js"
+    ]
+}
+doctype_list_js = {
+    "WhatsApp Session": [
+        "public/js/whatsapp_session.js",
+        "public/js/whatsapp_session_merge.js"
+    ]
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 

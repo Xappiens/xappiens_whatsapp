@@ -495,8 +495,13 @@ def send_message(conversation_id: str, content: str, message_type: str = "text")
         return {
             "success": True,
             "message": "Mensaje enviado correctamente",
+            "content": content,  # Incluir contenido en la respuesta
             "message_id": message_id,
-            "whatsapp_message": message_doc.name
+            "whatsapp_message": message_doc.name,
+            "conversation_id": conversation_id,
+            "timestamp": now_ts.isoformat() if hasattr(now_ts, "isoformat") else str(now_ts),
+            "direction": "Outgoing",
+            "status": "sent"
         }
 
     except Exception as e:
@@ -764,3 +769,272 @@ def get_messages(conversation_id: str, limit: int = 50, offset: int = 0) -> Dict
             "messages": [],
             "total": 0
         }
+
+
+@frappe.whitelist()
+def send_message_with_media(conversation_id: str, content: str, file_path: str, media_type: str = None) -> Dict[str, Any]:
+    """
+    Envía un mensaje con archivo adjunto a una conversación.
+
+    Args:
+        conversation_id: ID de la conversación
+        content: Contenido del mensaje (caption)
+        file_path: Ruta del archivo en Frappe
+        media_type: Tipo de media (opcional, se detecta automáticamente)
+
+    Returns:
+        Dict con resultado del envío
+    """
+    try:
+        # Validar y procesar archivo
+        from .media import upload_media_file
+
+        media_result = upload_media_file(file_path, media_type)
+        if not media_result.get("success"):
+            return media_result
+
+        media_info = media_result
+
+        # Obtener conversación y sesión
+        conversation = frappe.get_doc("WhatsApp Conversation", conversation_id)
+        session = frappe.get_doc("WhatsApp Session", conversation.session)
+
+        if not session.is_connected:
+            try:
+                from .session_status import get_session_status as refresh_session_status
+                status_result = refresh_session_status(session_name=session.name)
+                if status_result.get("success"):
+                    session.reload()
+            except Exception:
+                pass
+
+        if not session.is_connected:
+            return {
+                "success": False,
+                "message": "La sesión no está conectada"
+            }
+
+        # Preparar datos para envío
+        client = WhatsAppAPIClient(session.session_id)
+
+        # Determinar identificador del destinatario
+        to_number = conversation.phone_number or conversation.chat_id
+        if to_number:
+            normalized = to_number.replace("+", "").replace(" ", "")
+            if "@" not in normalized:
+                to_number = f"{normalized}@s.whatsapp.net"
+            else:
+                to_number = normalized.replace("@c.us", "@s.whatsapp.net")
+
+        # Enviar mensaje con media al servidor externo
+        # Según documentación Baileys: usar /api/messages/{sessionId}/send con estructura específica
+        file_url = frappe.utils.get_url() + media_info["file_path"]
+
+        # Construir mensaje según tipo de media según documentación Baileys
+        message_payload = {}
+        caption_text = content.strip() if content and content.strip() else ""
+
+        # Si no hay caption, usar el nombre del archivo como contenido para evitar errores de validación
+        # Esto es solo para evitar el error "Message content is required" del servidor
+        display_content = caption_text if caption_text else f"📎 {media_info['filename']}"
+
+        if media_info["media_type"] == "image":
+            message_payload["image"] = {"url": file_url}
+            if caption_text:
+                message_payload["caption"] = caption_text
+        elif media_info["media_type"] == "video":
+            message_payload["video"] = {"url": file_url}
+            if caption_text:
+                message_payload["caption"] = caption_text
+        elif media_info["media_type"] in ["audio", "voice"]:
+            message_payload["audio"] = {"url": file_url}
+            message_payload["ptt"] = (media_info["media_type"] == "voice")
+        elif media_info["media_type"] == "document":
+            message_payload["document"] = {
+                "url": file_url,
+                "fileName": media_info["filename"],
+                "mimetype": media_info["mimetype"]
+            }
+            if caption_text:
+                message_payload["caption"] = caption_text
+        else:
+            # Por defecto, tratar como documento
+            message_payload["document"] = {
+                "url": file_url,
+                "fileName": media_info["filename"],
+                "mimetype": media_info["mimetype"]
+            }
+            if caption_text:
+                message_payload["caption"] = caption_text
+
+        send_data = {
+            "to": to_number,
+            "message": message_payload,
+            "type": media_info["media_type"]
+        }
+
+        # Log para debugging
+        frappe.logger().info(f"Sending media message - type: {media_info['media_type']}, filename: {media_info['filename']}, mimetype: {media_info['mimetype']}, has_caption: {bool(caption_text)}")
+
+        response = client.post(f"/api/messages/{session.session_id}/send", data=send_data)
+
+        # Manejar respuesta: si hay error pero el archivo puede haberse enviado
+        # (algunos servidores devuelven error de validación pero envían el archivo)
+        error_message = response.get('message', '')
+        is_content_error = 'content is required' in error_message.lower() or 'message content' in error_message.lower()
+        file_sent_despite_error = False
+
+        if not response.get("success"):
+            # Si es un error de "content required" pero el archivo puede haberse enviado,
+            # intentar guardar el mensaje de todas formas (el webhook lo confirmará)
+            if is_content_error:
+                frappe.logger().warning(f"Baileys returned content error but file may have been sent: {error_message}")
+                # Marcar que el archivo puede haberse enviado a pesar del error
+                file_sent_despite_error = True
+                # Continuar para guardar el mensaje de todas formas
+                # El webhook confirmará si realmente se envió
+            else:
+                return {
+                    "success": False,
+                    "message": f"Error al enviar mensaje con media: {error_message}"
+                }
+
+        # Guardar mensaje en DocType (incluso si hubo error de content pero el archivo se envió)
+        payload = response.get("data") or {}
+        message_data = payload.get("message") if isinstance(payload, dict) else response.get("message", {})
+
+        # Si hubo error de content pero el archivo se envió, generar un ID temporal
+        # El webhook lo actualizará con el ID real cuando llegue
+        if file_sent_despite_error and not message_data.get("id"):
+            message_id = f"temp-{frappe.generate_hash(length=20)}"
+            frappe.logger().info(f"Generated temporary message ID for file sent despite content error: {message_id}")
+        else:
+            message_id = (
+                message_data.get("id", {}).get("_serialized")
+                if isinstance(message_data.get("id"), dict)
+                else message_data.get("id")
+            ) or payload.get("messageId") or response.get("messageId") or frappe.generate_hash(length=20)
+
+        # Crear documento WhatsApp Message
+        # Usar display_content que incluye nombre de archivo si no hay caption
+        message_content = display_content if 'display_content' in locals() else (content if content else f"📎 {media_info['filename']}")
+
+        message_doc = frappe.get_doc({
+            "doctype": "WhatsApp Message",
+            "session": session.name,
+            "conversation": conversation_id,
+            "contact": conversation.contact,
+            "message_id": message_id,
+            "content": message_content,
+            "direction": "Outgoing",
+            "message_type": media_info["media_type"],
+            "status": "sent",
+            "timestamp": frappe.utils.now_datetime(),
+            "from_number": session.phone_number,
+            "to_number": to_number,
+            "from_me": True,
+            "has_media": True,
+            "is_forwarded": False,
+            "is_starred": False,
+            "is_status": False
+        })
+
+        # Agregar información del archivo
+        message_doc.append("media_items", {
+            "media_type": media_info["media_type"],
+            "file": media_info["file_path"],
+            "filename": media_info["filename"],
+            "filesize": media_info["filesize"],
+            "mimetype": media_info["mimetype"]
+        })
+
+        message_doc.insert(ignore_permissions=True)
+
+        # Actualizar estadísticas de la sesión
+        frappe.db.set_value("WhatsApp Session", session.name, "total_messages_sent",
+                           (session.total_messages_sent or 0) + 1)
+
+        # Actualizar última actividad de la conversación
+        now_ts = frappe.utils.now_datetime()
+        # Usar message_content que ya tiene el nombre del archivo si no hay caption
+        last_message_text = message_content if 'message_content' in locals() else (f"📎 {media_info['filename']}" if not content else content)
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "last_message", last_message_text)
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "last_message_time", now_ts)
+        frappe.db.set_value("WhatsApp Conversation", conversation_id, "total_messages",
+                           (conversation.total_messages or 0) + 1)
+
+        frappe.db.commit()
+
+        payload = {
+            "session": session.name,
+            "conversation": conversation_id,
+            "conversation_id": conversation_id,
+            "message_id": message_doc.name,
+            "message": message_content if 'message_content' in locals() else display_content,
+            "content": message_content if 'message_content' in locals() else display_content,
+            "media_type": media_info["media_type"],
+            "filename": media_info["filename"],
+            "from": session.phone_number,
+            "direction": "outgoing",
+            "timestamp": now_ts.isoformat() if hasattr(now_ts, "isoformat") else str(now_ts),
+            "status": "sent"
+        }
+
+        frappe.publish_realtime("whatsapp_message", payload, user="*")
+        frappe.publish_realtime("whatsapp_message_sent", payload, user="*")
+
+        # Si el archivo se envió a pesar del error de content, marcar como éxito
+        # El mensaje ya está guardado en la BD y aparecerá en la conversación
+        success_message = "Mensaje con archivo enviado correctamente"
+        if file_sent_despite_error:
+            success_message = f"Mensaje con archivo enviado (advertencia del servidor: {error_message})"
+
+        return {
+            "success": True,  # Siempre True porque el mensaje se guardó
+            "message": success_message,
+            "content": message_content if 'message_content' in locals() else display_content,
+            "message_id": message_id,
+            "whatsapp_message": message_doc.name,
+            "conversation_id": conversation_id,
+            "media_type": media_info["media_type"],
+            "filename": media_info["filename"],
+            "timestamp": now_ts.isoformat() if hasattr(now_ts, "isoformat") else str(now_ts),
+            "direction": "Outgoing",
+            "status": "sent",
+            "warning": error_message if file_sent_despite_error else None  # Incluir warning si hubo error de content
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error sending message with media: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error al enviar mensaje con archivo: {str(e)}"
+        }
+
+
+def process_media_items(message_doc, media_data_list):
+    """
+    Procesa y agrega items de media a un mensaje.
+
+    Args:
+        message_doc: Documento WhatsApp Message
+        media_data_list: Lista de datos de media
+    """
+    try:
+        for media_data in media_data_list:
+            message_doc.append("media_items", {
+                "media_type": media_data.get("media_type", "document"),
+                "file": media_data.get("file"),
+                "filename": media_data.get("filename"),
+                "filesize": media_data.get("filesize"),
+                "mimetype": media_data.get("mimetype"),
+                "url": media_data.get("url"),
+                "thumbnail": media_data.get("thumbnail"),
+                "remote_media_id": media_data.get("remote_media_id"),
+                "media_hash": media_data.get("media_hash")
+            })
+
+        message_doc.has_media = True
+
+    except Exception as e:
+        frappe.log_error(f"Error processing media items: {str(e)}", "WhatsApp Media Processing")
